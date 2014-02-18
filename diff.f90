@@ -97,25 +97,25 @@
 
 	implicit none
 	
-	integer, intent(in)     :: iord
-	real(wp), intent(in)    :: x0
-	real(wp), intent(in)    :: xmin
-	real(wp), intent(in)    :: xmax
-	real(wp), intent(in)    :: eps
-	real(wp), intent(in)    :: accr
-	real(wp), intent(out)   :: deriv
-	real(wp), intent(out)   :: error
-	integer, intent(out)    :: ifail
-	procedure(func)         :: f
+	integer, intent(in)   :: iord
+	real(wp), intent(in)  :: x0
+	real(wp), intent(in)  :: xmin
+	real(wp), intent(in)  :: xmax
+	real(wp), intent(in)  :: eps
+	real(wp), intent(in)  :: accr
+	real(wp), intent(out) :: deriv
+	real(wp), intent(out) :: error
+	integer, intent(out)  :: ifail
+	procedure(func)       :: f
 
-	real(wp) :: acc,beta,beta4,h,h0,h1,h2,  &
-		newh1,newh2,heval,hprev,baseh,hacc1,hacc2,nhacc1,  &
-		nhacc2,minh,maxh,maxh1,maxh2,tderiv,f0,twof0,f1,f2,f3,f4,fmax,  &
-		maxfun,pmaxf,df1,deltaf,pdelta,z,zpower,c0f0,c1,c2,c3,dnew,dprev,  &
-		re,te,newerr,temerr,newacc,pacc1,pacc2,facc1,facc2,acc0,  &
-		acc1,acc2,relacc,twoinf,twosup,s,  &
+	real(wp) :: acc,beta,beta4,h,h0,h1,h2, &
+		newh1,newh2,heval,hprev,baseh,hacc1,hacc2,nhacc1, &
+		nhacc2,minh,maxh,maxh1,maxh2,tderiv,f0,twof0,f1,f2,f3,f4,fmax, &
+		maxfun,pmaxf,df1,deltaf,pdelta,z,zpower,c0f0,c1,c2,c3,dnew,dprev, &
+		re,te,newerr,temerr,newacc,pacc1,pacc2,facc1,facc2,acc0, &
+		acc1,acc2,relacc,twoinf,twosup,s, &
 		d(10),denom(10),e(10),minerr(10),maxf(0:10),save(0:13),storef(-45:45),factor
-	integer :: i,j,k,n,nmax,method,signh,fcount, init
+	integer :: i,j,k,n,nmax,method,signh,fcount,init
 	logical :: ignore(10),contin,saved
 	real(wp) :: dummy1,dummy2
 
@@ -798,7 +798,9 @@
 	!***********************************************************
 		subroutine write_results(truth)
 	!***********************************************************
+	
 		implicit none
+	
 		real(wp),intent(in) :: truth
 		
 		write(*,'(A)') ''
@@ -817,7 +819,9 @@
 	!***********************************************************
 		function sin_func(x) result(fx)
 	!***********************************************************
+	
 		implicit none
+	
 		real(wp),intent(in) :: x
 		real(wp) :: fx
 		
@@ -831,7 +835,9 @@
 	!***********************************************************
 		function test_func_1(x) result(fx)
 	!***********************************************************
+	
 		implicit none
+	
 		real(wp),intent(in) :: x
 		real(wp) :: fx
 		
@@ -845,7 +851,9 @@
 	!***********************************************************
 		function test_func_2(x) result(fx)
 	!***********************************************************
+	
 		implicit none
+	
 		real(wp),intent(in) :: x
 		real(wp) :: fx
 		
