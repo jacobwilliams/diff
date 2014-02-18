@@ -312,12 +312,12 @@
 				do i = 6,nmax
 				  e(i) = 26.0_wp
 				end do
-				if (method == 2.and.iord == 2) then
+				if (method == 2 .and. iord == 2) then
 				  do i = 1,nmax
 					e(i)=2.0_wp*e(i)
 				  end do
 				end if
-			  else if (method /= 2.and.iord == 2) then
+			  else if (method /= 2 .and. iord == 2) then
 				e(1) = 17.78_wp
 				e(2) = 30.06_wp
 				e(3) = 39.66_wp
@@ -326,7 +326,7 @@
 				do i = 6,nmax
 				  e(i) = 55.0_wp
 				end do
-			  else if (method == 2.and.iord == 3) then
+			  else if (method == 2 .and. iord == 3) then
 				e(1) = 25.97_wp
 				e(2) = 41.22_wp
 				e(3) = 50.95_wp
