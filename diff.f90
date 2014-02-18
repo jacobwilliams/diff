@@ -1,217 +1,233 @@
-!DECK DIFF
+!deck diff
 
-! Code converted using TO_F90 by Alan Miller
-! Date: 2014-02-17  Time: 20:46:07
+	module diff_module
+	
+	implicit none
+	
+	abstract interface
+		function func(x) result(fx)
+			implicit none
+			real,intent(in) :: x
+			real :: fx	
+		end function func	
+	end interface
+	
+	
+	contains
+	
 
-SUBROUTINE diff(iord,x0,xmin,xmax,f,eps,acc,deriv,error,ifail)
+! code converted using to_f90 by alan miller
+! date: 2014-02-17  time: 20:23:56
 
-!             NUMERICAL DIFFERENTIATION OF USER DEFINED FUNCTION
+subroutine diff(iord,x0,xmin,xmax,f,eps,acc,deriv,error,ifail)
 
-!                         DAVID KAHANER, NBS (GAITHERSBURG)
+!             numerical differentiation of user defined function
+!
+!                         david kahaner, nbs (gaithersburg)
+!
+!  the procedure differentiate calculates the first, second or
+!   third order derivative of a function by using neville's process to
+!   extrapolate from a sequence of simple polynomial approximations based on
+!   interpolating points distributed symmetrically about x0 (or lying only on
+!   one side of x0 should this be necessary).  if the specified tolerance is
+!   non-zero then the procedure attempts to satisfy this absolute or relative
+!   accuracy requirement, while if it is unsuccessful or if the tolerance is
+!   set to zero then the result having the minimum achievable estimated error
+!   is returned instead.
+!
+! input parameters:
+! iord = 1, 2 or 3 specifies that the first, second or third order
+!   derivative,respectively, is required.
+! x0 is the point at which the derivative of the function is to be calculated.
+! xmin, xmax restrict the interpolating points to lie in [xmin, xmax], which
+!   should be the largest interval including x0 in which the function is
+!   calculable and continuous.
+! f, a real procedure supplied by the user, must yield the value of the
+!   function at x for any x in [xmin, xmax] when called by f(x).
+! eps denotes the tolerance, either absolute or relative.  eps=0 specifies that
+!   the error is to be minimised, while eps>0 or eps<0 specifies that the
+!   absolute or relative error, respectively, must not exceed abs(eps) if
+!   possible.  the accuracy requirement should not be made stricter than
+!   necessary, since the amount of computation tends to increase as
+!   the magnitude of eps decreases, and is particularly high when eps=0.
+! acc denotes that the absolute (acc>0) or relative (acc<0) errors in the
+!   computed values of the function are most unlikely to exceed abs(acc), which
+!   should be as small as possible.  if the user cannot estimate acc with
+!   complete confidence, then it should be set to zero.
+!
+! output parameters:
+! deriv is the calculated value of the derivative.
+! error is an estimated upper bound on the magnitude of the absolute error in
+!   the calculated result.  it should always be examined, since in extreme case
+!   may indicate that there are no correct significant digits in the value
+!   returned for derivative.
+! ifail will have one of the following values on exit:
+!   0   the procedure was successful.
+!   1   the estimated error in the result exceeds the (non-zero) requested
+!          error, but the most accurate result possible has been returned.
+!   2   input data incorrect (derivative and error will be undefined).
+!   3   the interval [xmin, xmax] is too small (derivative and error will be
+!          undefined);
 
-!  THE PROCEDURE DIFFERENTIATE CALCULATES THE FIRST, SECOND OR
-!   THIRD ORDER DERIVATIVE OF A FUNCTION BY USING NEVILLE'S PROCESS TO
-!   EXTRAPOLATE FROM A SEQUENCE OF SIMPLE POLYNOMIAL APPROXIMATIONS BASED ON
-!   INTERPOLATING POINTS DISTRIBUTED SYMMETRICALLY ABOUT X0 (OR LYING ONLY ON
-!   ONE SIDE OF X0 SHOULD THIS BE NECESSARY).  IF THE SPECIFIED TOLERANCE IS
-!   NON-ZERO THEN THE PROCEDURE ATTEMPTS TO SATISFY THIS ABSOLUTE OR RELATIVE
-!   ACCURACY REQUIREMENT, WHILE IF IT IS UNSUCCESSFUL OR IF THE TOLERANCE IS
-!   SET TO ZERO THEN THE RESULT HAVING THE MINIMUM ACHIEVABLE ESTIMATED ERROR
-!   IS RETURNED INSTEAD.
+integer, intent(in)                      :: iord
+real, intent(in)                         :: x0
+real, intent(in)                         :: xmin
+real, intent(in)                         :: xmax
+real, intent(in)                         :: eps
+real, intent(in out)                     :: acc
+real, intent(out)                        :: deriv
+real, intent(out)                        :: error
+integer, intent(out)                     :: ifail
+procedure(func) :: f
 
-! INPUT PARAMETERS:
-! IORD = 1, 2 OR 3 SPECIFIES THAT THE FIRST, SECOND OR THIRD ORDER
-!   DERIVATIVE,RESPECTIVELY, IS REQUIRED.
-! X0 IS THE POINT AT WHICH THE DERIVATIVE OF THE FUNCTION IS TO BE CALCULATED.
-! XMIN, XMAX RESTRICT THE INTERPOLATING POINTS TO LIE IN [XMIN, XMAX], WHICH
-!   SHOULD BE THE LARGEST INTERVAL INCLUDING X0 IN WHICH THE FUNCTION IS
-!   CALCULABLE AND CONTINUOUS.
-! F, A REAL PROCEDURE SUPPLIED BY THE USER, MUST YIELD THE VALUE OF THE
-!   FUNCTION AT X FOR ANY X IN [XMIN, XMAX] WHEN CALLED BY F(X).
-! EPS DENOTES THE TOLERANCE, EITHER ABSOLUTE OR RELATIVE.  EPS=0 SPECIFIES THAT
-!   THE ERROR IS TO BE MINIMISED, WHILE EPS>0 OR EPS<0 SPECIFIES THAT THE
-!   ABSOLUTE OR RELATIVE ERROR, RESPECTIVELY, MUST NOT EXCEED ABS(EPS) IF
-!   POSSIBLE.  THE ACCURACY REQUIREMENT SHOULD NOT BE MADE STRICTER THAN
-!   NECESSARY, SINCE THE AMOUNT OF COMPUTATION TENDS TO INCREASE AS
-!   THE MAGNITUDE OF EPS DECREASES, AND IS PARTICULARLY HIGH WHEN EPS=0.
-! ACC DENOTES THAT THE ABSOLUTE (ACC>0) OR RELATIVE (ACC<0) ERRORS IN THE
-!   COMPUTED VALUES OF THE FUNCTION ARE MOST UNLIKELY TO EXCEED ABS(ACC), WHICH
-!   SHOULD BE AS SMALL AS POSSIBLE.  IF THE USER CANNOT ESTIMATE ACC WITH
-!   COMPLETE CONFIDENCE, THEN IT SHOULD BE SET TO ZERO.
-
-! OUTPUT PARAMETERS:
-! DERIV IS THE CALCULATED VALUE OF THE DERIVATIVE.
-! ERROR IS AN ESTIMATED UPPER BOUND ON THE MAGNITUDE OF THE ABSOLUTE ERROR IN
-!   THE CALCULATED RESULT.  IT SHOULD ALWAYS BE EXAMINED, SINCE IN EXTREME CASE
-!   MAY INDICATE THAT THERE ARE NO CORRECT SIGNIFICANT DIGITS IN THE VALUE
-!   RETURNED FOR DERIVATIVE.
-! IFAIL WILL HAVE ONE OF THE FOLLOWING VALUES ON EXIT:
-!   0   THE PROCEDURE WAS SUCCESSFUL.
-!   1   THE ESTIMATED ERROR IN THE RESULT EXCEEDS THE (NON-ZERO) REQUESTED
-!          ERROR, BUT THE MOST ACCURATE RESULT POSSIBLE HAS BEEN RETURNED.
-!   2   INPUT DATA INCORRECT (DERIVATIVE AND ERROR WILL BE UNDEFINED).
-!   3   THE INTERVAL [XMIN, XMAX] IS TOO SMALL (DERIVATIVE AND ERROR WILL BE
-!          UNDEFINED);
-
-
-INTEGER, INTENT(IN)                      :: iord
-REAL, INTENT(IN)                         :: x0
-REAL, INTENT(IN)                         :: xmin
-REAL, INTENT(IN)                         :: xmax
-REAL, INTENT(IN)                         :: f
-REAL, INTENT(IN)                         :: eps
-REAL, INTENT(IN OUT)                     :: acc
-REAL, INTENT(OUT)                        :: deriv
-REAL, INTENT(OUT)                        :: error
-INTEGER, INTENT(OUT)                     :: ifail
-EXTERNAL f
-REAL :: beta,beta4,h,h0,h1,h2,  &
+real :: beta,beta4,h,h0,h1,h2,  &
     newh1,newh2,heval,hprev,baseh,hacc1,hacc2,nhacc1,  &
     nhacc2,minh,maxh,maxh1,maxh2,tderiv,f0,twof0,f1,f2,f3,f4,fmax,  &
     maxfun,pmaxf,df1,deltaf,pdelta,z,zpower,c0f0,c1,c2,c3,dnew,dprev,  &
     re,te,newerr,temerr,newacc,pacc1,pacc2,facc1,facc2,acc0,  &
     acc1,acc2,relacc,twoinf,twosup,s,  &
-    d(10),denom(10),e(10),minerr(10),maxf(0:10),SAVE(0:13), storef(-45:45),factor
+    d(10),denom(10),e(10),minerr(10),maxf(0:10),save(0:13), storef(-45:45),factor
+integer :: eta,inf,sup,i,j,k,n,nmax,method,signh,fcount, init
+logical :: ignore(10),contin,saved
+real :: dummy1,dummy2
 
-INTEGER :: eta,inf,sup,i,j,k,n,nmax,method,signh,fcount, init
-LOGICAL :: ignore(10),contin,saved
-
-
-! ETA IS THE MINIMUM NUMBER OF SIGNIFICANT BINARY DIGITS (APART FROM THE
-! SIGN DIGIT) USED TO REPRESENT THE MANTISSA OF REAL NUMBERS. IT SHOULD
-! BE DEVREASED BY ONE IF THE COMPUTER TRUNCATES RATHER THAN ROUNDS.
-! INF, SUP ARE THE LARGEST POSSIBLE POSITIVE INTEGERS SUBJECT TO
-! 2**(-INF), -2**(-INF), 2**SUP, AND -2**SUP ALL BEING REPRESENTABLE REAL
-! NUMBERS.
+! eta is the minimum number of significant binary digits (apart from the
+! sign digit) used to represent the mantissa of real numbers. it should
+! be devreased by one if the computer truncates rather than rounds.
+! inf, sup are the largest possible positive integers subject to
+! 2**(-inf), -2**(-inf), 2**sup, and -2**sup all being representable real
+! numbers.
 eta=i1mach(11) - 1
 inf=-i1mach(12) - 2
-sup=i1mach(13)-1
-IF(iord < 1 .OR. iord > 3 .OR. xmax <= xmin .OR.  &
-      x0 > xmax .OR. x0 < xmin) THEN
+sup=i1mach(13) - 1
+if(iord < 1 .or. iord > 3 .or. xmax <= xmin .or.  &
+      x0 > xmax .or. x0 < xmin) then
   ifail = 2
-  RETURN
-END IF
+  return
+end if
 
 twoinf = 2.**(-inf)
 twosup = 2.**sup
-factor = 2**(FLOAT((inf+sup))/30.)
-IF(factor < 256.)factor=256.
+factor = 2**(float((inf+sup))/30.)
+if(factor < 256.)factor=256.
 maxh1 = xmax - x0
 signh = 1
-IF(x0-xmin <= maxh1)THEN
+if(x0-xmin <= maxh1)then
   maxh2 = x0 - xmin
-ELSE
+else
   maxh2 = maxh1
   maxh1 = x0 - xmin
   signh = -1
-END IF
+end if
 relacc = 2.**(1-eta)
 maxh1 = (1.-relacc)*maxh1
 maxh2 = (1.-relacc)*maxh2
 s=128.*twoinf
-IF(ABS(x0) > 128.*twoinf*2.**eta) s = ABS(x0)*2.**(-eta)
-IF(maxh1 < s)THEN
-!         INTERVAL TOO SMALL
+if(abs(x0) > 128.*twoinf*2.**eta) s = abs(x0)*2.**(-eta)
+if(maxh1 < s)then
+!         interval too small
   ifail =3
-  RETURN
-END IF
-IF(acc < 0.) THEN
-  IF(-acc > relacc)relacc = -acc
+  return
+end if
+if(acc < 0.) then
+  if(-acc > relacc)relacc = -acc
   acc = 0.
-END IF
+end if
 
-!     DETERMINE THE SMALLEST SPACING AT WHICH THE CALCULATED
-!     FUNCTION VALUES ARE UNEQUAL NEAR X0.
+!     determine the smallest spacing at which the calculated
+!     function values are unequal near x0.
 
 f0 = f(x0)
 twof0 = f0 + f0
-IF(ABS(x0) > twoinf*2.**eta) THEN
-  h = ABS(x0)*2.**(-eta)
+if(abs(x0) > twoinf*2.**eta) then
+  h = abs(x0)*2.**(-eta)
   z = 2.
-ELSE
+else
   h = twoinf
   z = 64.
-END IF
+end if
 df1 = f(x0+signh*h) - f0
-80 IF(df1 /= 0. .OR. z*h > maxh1) GO TO 100
+80 if(df1 /= 0. .or. z*h > maxh1) go to 100
 h = z*h
 df1 = f(x0+signh*h) - f0
-IF(z /= 2.) THEN
-  IF(df1 /= 0.) THEN
+if(z /= 2.) then
+  if(df1 /= 0.) then
     h = h/z
     z = 2.
     df1 = 0.
-  ELSE
-    IF(z*h > maxh1) z = 2.
-  END IF
-END IF
-GO TO 80
-100 CONTINUE
+  else
+    if(z*h > maxh1) z = 2.
+  end if
+end if
+go to 80
+100 continue
 
-IF(df1 == 0.) THEN
-!         CONSTANT FUNCTION
+if(df1 == 0.) then
+!         constant function
   deriv = 0.
   error = 0.
   ifail = 0
-  RETURN
-END IF
-IF(h > maxh1/128.) THEN
-!         MINIMUM H TOO LARGE
+  return
+end if
+if(h > maxh1/128.) then
+!         minimum h too large
   ifail = 3
-  RETURN
-END IF
+  return
+end if
 
 h = 8.*h
 h1 = signh*h
 h0 = h1
 h2 = -h1
-minh = 2.**(-MIN(inf,sup)/iord)
-IF(minh < h) minh = h
-IF(iord == 1) s = 8.
-IF(iord == 2) s = 9.*SQRT(3.)
-IF(iord == 3) s = 27.
-IF(minh > maxh1/s) THEN
+minh = 2.**(-min(inf,sup)/iord)
+if(minh < h) minh = h
+if(iord == 1) s = 8.
+if(iord == 2) s = 9.*sqrt(3.)
+if(iord == 3) s = 27.
+if(minh > maxh1/s) then
   ifail = 3
-  RETURN
-END IF
-IF(minh > maxh2/s .OR. maxh2 < 128.*twoinf) THEN
+  return
+end if
+if(minh > maxh2/s .or. maxh2 < 128.*twoinf) then
   method = 1
-ELSE
+else
   method = 2
-END IF
+end if
 
-!     METHOD 1 USES 1-SIDED FORMULAE, AND METHOD 2 SYMMETRIC.
-!         NOW ESTIMATE ACCURACY OF CALCULATED FUNCTION VALUES.
+!     method 1 uses 1-sided formulae, and method 2 symmetric.
+!         now estimate accuracy of calculated function values.
 
-IF(method /= 2 .OR. iord == 2) THEN
-  IF(x0 /= 0.) THEN
-    CALL faccur(0.,-h1,acc0,x0,f,twoinf,f0,f1)
-  ELSE
+if(method /= 2 .or. iord == 2) then
+  if(x0 /= 0.) then
+    dummy1 = 0.
+    dummy2 = -h1
+    call faccur(dummy1,dummy2,acc0,x0,f,twoinf,f0,f1)
+  else
     acc0 = 0.
-  END IF
-END IF
+  end if
+end if
 
-IF(ABS(h1) > twosup/128.) THEN
+if(abs(h1) > twosup/128.) then
   hacc1 = twosup
-ELSE
+else
   hacc1 = 128.*h1
-END IF
+end if
 
-IF(ABS(hacc1)/4. < minh) THEN
+if(abs(hacc1)/4. < minh) then
   hacc1 = 4.*signh*minh
-ELSE IF(ABS(hacc1) > maxh1) THEN
+else if(abs(hacc1) > maxh1) then
   hacc1 = signh*maxh1
-END IF
+end if
 f1 = f(x0+hacc1)
-CALL faccur(hacc1,h1,acc1,x0,f,twoinf,f0,f1)
-IF(method == 2) THEN
+call faccur(hacc1,h1,acc1,x0,f,twoinf,f0,f1)
+if(method == 2) then
   hacc2 = -hacc1
-  IF(ABS(hacc2) > maxh2) hacc2 = -signh * maxh2
+  if(abs(hacc2) > maxh2) hacc2 = -signh * maxh2
   f1 = f(x0 + hacc2)
-  CALL faccur(hacc2,h2,acc2,x0,f,twoinf,f0,f1)
-END IF
+  call faccur(hacc2,h2,acc2,x0,f,twoinf,f0,f1)
+end if
 nmax = 8
-IF(eta > 36) nmax = 10
+if(eta > 36) nmax = 10
 n = -1
 fcount = 0
 deriv = 0.
@@ -220,482 +236,616 @@ init = 3
 contin = .true.
 
 130 n = n+1
-IF(.NOT. contin) GO TO 800
+if(.not. contin) go to 800
 
-IF(init == 3) THEN
-!         CALCULATE COEFFICIENTS FOR DIFFERENTIATION FORMULAE
-!             AND NEVILLE EXTRAPOLATION ALGORITHM
-  IF(iord == 1) THEN
+if(init == 3) then
+!         calculate coefficients for differentiation formulae
+!             and neville extrapolation algorithm
+  if(iord == 1) then
     beta=2.
-  ELSE IF(method == 2)THEN
-    beta = SQRT(2.)
-  ELSE
-    beta = SQRT(3.)
-  END IF
+  else if(method == 2)then
+    beta = sqrt(2.)
+  else
+    beta = sqrt(3.)
+  end if
   beta4 = beta**4.
   z = beta
-  IF(method == 2) z = z**2
+  if(method == 2) z = z**2
   zpower = 1.
-  DO  k = 1,nmax
+  do  k = 1,nmax
     zpower = z*zpower
     denom(k) = zpower-1
-  END DO
-  IF(method == 2 .AND. iord == 1) THEN
+  end do
+  if(method == 2 .and. iord == 1) then
     e(1) = 5.
     e(2) = 6.3
-    DO  i = 3,nmax
+    do  i = 3,nmax
       e(i) = 6.81
-    END DO
-  ELSE IF((method /= 2.AND.iord == 1) .OR. (method == 2.AND.  &
-        iord == 2)) THEN
+    end do
+  else if((method /= 2.and.iord == 1) .or. (method == 2.and.  &
+        iord == 2)) then
     e(1) = 10.
     e(2) = 16.
     e(3) = 20.36
     e(4) = 23.
     e(5) = 24.46
-    DO  i = 6,nmax
+    do  i = 6,nmax
       e(i) = 26.
-    END DO
-    IF(method == 2.AND.iord == 2) THEN
-      DO  i = 1,nmax
+    end do
+    if(method == 2.and.iord == 2) then
+      do  i = 1,nmax
         e(i)=2*e(i)
-      END DO
-    END IF
-  ELSE IF(method /= 2.AND.iord == 2) THEN
+      end do
+    end if
+  else if(method /= 2.and.iord == 2) then
     e(1) = 17.78
     e(2) = 30.06
     e(3) = 39.66
     e(4) = 46.16
     e(5) = 50.26
-    DO  i = 6,nmax
+    do  i = 6,nmax
       e(i) = 55.
-    END DO
-  ELSE IF(method == 2.AND.iord == 3) THEN
+    end do
+  else if(method == 2.and.iord == 3) then
     e(1) = 25.97
     e(2) = 41.22
     e(3) = 50.95
     e(4) = 56.4
     e(5) = 59.3
-    DO  i = 6,nmax
+    do  i = 6,nmax
       e(i) = 62.
-    END DO
-  ELSE
+    end do
+  else
     e(1) = 24.5
     e(2) = 40.4
     e(3) = 52.78
     e(4) = 61.2
     e(5) = 66.55
-    DO  i = 6,nmax
+    do  i = 6,nmax
       e(i) = 73.
-    END DO
+    end do
     c0f0 = -twof0/(3.*beta)
     c1 = 3./(3.*beta-1.)
     c2 = -1./(3.*(beta-1.))
     c3 = 1./(3.*beta*(5.-2.*beta))
-  END IF
-END IF
+  end if
+end if
 
 
-IF(init >= 2) THEN
-!         INITIALIZATION OF STEPLENGTHS, ACCURACY AND OTHER
-!             PARAMETERS
+if(init >= 2) then
+!         initialization of steplengths, accuracy and other
+!             parameters
   
   heval = signh*minh
   h = heval
   baseh = heval
   maxh = maxh2
-  IF(method == 1)maxh = maxh1
-  DO  k = 1,nmax
+  if(method == 1)maxh = maxh1
+  do  k = 1,nmax
     minerr(k) = twosup
     ignore(k) = .false.
-  END DO
-  IF(method == 1) newacc = acc1
-  IF(method == -1) newacc = acc2
-  IF(method == 2) newacc = (acc1+acc2)/2.
-  IF(newacc < acc) newacc = acc
-  IF((method /= 2 .OR. iord == 2) .AND. newacc < acc0) newacc = acc0
-  IF(method /= -1) THEN
+  end do
+  if(method == 1) newacc = acc1
+  if(method == -1) newacc = acc2
+  if(method == 2) newacc = (acc1+acc2)/2.
+  if(newacc < acc) newacc = acc
+  if((method /= 2 .or. iord == 2) .and. newacc < acc0) newacc = acc0
+  if(method /= -1) then
     facc1 = acc1
     nhacc1 = hacc1
     newh1 = h1
-  END IF
-  IF(method /= 1) THEN
+  end if
+  if(method /= 1) then
     facc2 = acc2
     nhacc2 = hacc2
     newh2 = h2
-  ELSE
+  else
     facc2 = 0.
     nhacc2 = 0.
-  END IF
+  end if
   init = 1
   j = 0
   saved = .false.
-END IF
+end if
 
-!     CALCULATE NEW OR INITIAL FUNCTION VALUES
+!     calculate new or initial function values
 
-IF(init == 1 .AND. (n == 0 .OR. iord == 1) .AND.  &
-      .NOT.(method == 2 .AND. fcount >= 45)) THEN
-  IF(method == 2) THEN
+if(init == 1 .and. (n == 0 .or. iord == 1) .and.  &
+      .not.(method == 2 .and. fcount >= 45)) then
+  if(method == 2) then
     fcount = fcount + 1
     f1 = f(x0+heval)
     storef(fcount) = f1
     f2 = f(x0-heval)
     storef(-fcount) = f2
-  ELSE
+  else
     j = j+1
-    IF(j <= fcount) THEN
+    if(j <= fcount) then
       f1 = storef(j*method)
-    ELSE
+    else
       f1 = f(x0+heval)
-    END IF
-  END IF
-ELSE
+    end if
+  end if
+else
   f1 = f(x0+heval)
-  IF(method == 2) f2 = f(x0-heval)
-END IF
-IF(n == 0) THEN
-  IF(method == 2 .AND. iord == 3) THEN
+  if(method == 2) f2 = f(x0-heval)
+end if
+if(n == 0) then
+  if(method == 2 .and. iord == 3) then
     pdelta = f1-f2
-    pmaxf = (ABS(f1)+ABS(f2))/2.
+    pmaxf = (abs(f1)+abs(f2))/2.
     heval = beta*heval
     f1 = f(x0+heval)
     f2 = f(x0-heval)
     deltaf = f1-f2
-    maxfun = (ABS(f1)+ABS(f2))/2.
+    maxfun = (abs(f1)+abs(f2))/2.
     heval = beta*heval
     f1 = f(x0+heval)
     f2 = f(x0-heval)
-  ELSE IF(method /= 2 .AND. iord >= 2) THEN
-    IF(iord == 2) THEN
+  else if(method /= 2 .and. iord >= 2) then
+    if(iord == 2) then
       f3 = f1
-    ELSE
+    else
       f4 = f1
       heval = beta*heval
       f3 = f(x0+heval)
-    END IF
+    end if
     heval = beta*heval
     f2 = f(x0+heval)
     heval = beta*heval
     f1 = f(x0+heval)
-  END IF
-END IF
+  end if
+end if
 
-!     EVALUATE A NEW APPROXIMATION DNEW TO THE DERIVATIVE
+!     evaluate a new approximation dnew to the derivative
 
-IF(n > nmax) THEN
+if(n > nmax) then
   n = nmax
-  DO  i = 1,n
+  do  i = 1,n
     maxf(i-1) = maxf(i)
-  END DO
-END IF
-IF(method == 2) THEN
-  maxf(n) = (ABS(f1)+ABS(f2))/2.
-  IF(iord == 1) THEN
+  end do
+end if
+if(method == 2) then
+  maxf(n) = (abs(f1)+abs(f2))/2.
+  if(iord == 1) then
     dnew = (f1-f2)/2.
-  ELSE IF(iord == 2) THEN
+  else if(iord == 2) then
     dnew = f1+f2-twof0
-  ELSE
+  else
     dnew = -pdelta
     pdelta = deltaf
     deltaf = f1-f2
     dnew = dnew + .5*deltaf
-    IF(maxf(n) < pmaxf) maxf(n) = pmaxf
+    if(maxf(n) < pmaxf) maxf(n) = pmaxf
     pmaxf = maxfun
-    maxfun = (ABS(f1)+ABS(f2))/2.
-  END IF
-ELSE
-  maxf(n) = ABS(f1)
-  IF(iord == 1) THEN
+    maxfun = (abs(f1)+abs(f2))/2.
+  end if
+else
+  maxf(n) = abs(f1)
+  if(iord == 1) then
     dnew = f1-f0
-  ELSE IF(iord == 2) THEN
+  else if(iord == 2) then
     dnew = (twof0-3*f3+f1)/3.
-    IF(maxf(n) < ABS(f3)) maxf(n) = ABS(f3)
+    if(maxf(n) < abs(f3)) maxf(n) = abs(f3)
     f3 = f2
     f2 = f1
-  ELSE
+  else
     dnew = c3*f1+c2*f2+c1*f4+c0f0
-    IF(maxf(n) < ABS(f2)) maxf(n) = ABS(f2)
-    IF(maxf(n) < ABS(f4)) maxf(n) = ABS(f4)
+    if(maxf(n) < abs(f2)) maxf(n) = abs(f2)
+    if(maxf(n) < abs(f4)) maxf(n) = abs(f4)
     f4 = f3
     f3 = f2
     f2 = f1
-  END IF
-END IF
-IF(ABS(h) > 1) THEN
+  end if
+end if
+if(abs(h) > 1) then
   dnew = dnew/h**iord
-ELSE
-  IF(128.*ABS(dnew) > twosup*ABS(h)**iord) THEN
+else
+  if(128.*abs(dnew) > twosup*abs(h)**iord) then
     dnew = twosup/128.
-  ELSE
+  else
     dnew = dnew/h**iord
-  END IF
-END IF
+  end if
+end if
 
-IF(init == 0) THEN
-!         UPDATE ESTIMATED ACCURACY OF FUNCTION VALUES
+if(init == 0) then
+!         update estimated accuracy of function values
   newacc = acc
-  IF((method /= 2 .OR. iord == 2) .AND. newacc < acc0) newacc = acc0
-  IF(method /= -1 .AND. ABS(nhacc1) <= 1.125*ABS(heval)/beta4) THEN
+  if((method /= 2 .or. iord == 2) .and. newacc < acc0) newacc = acc0
+  if(method /= -1 .and. abs(nhacc1) <= 1.125*abs(heval)/beta4) then
     nhacc1 = heval
     pacc1 = facc1
-    CALL faccur(nhacc1,newh1,facc1,x0,f,twoinf,f0,f1)
-    IF(facc1 < pacc1) facc1=(3*facc1+pacc1)/4.
-  END IF
-  IF(method /= 1 .AND. ABS(nhacc2) <= 1.125*ABS(heval)/beta4) THEN
-    IF(method == 2) THEN
+    call faccur(nhacc1,newh1,facc1,x0,f,twoinf,f0,f1)
+    if(facc1 < pacc1) facc1=(3*facc1+pacc1)/4.
+  end if
+  if(method /= 1 .and. abs(nhacc2) <= 1.125*abs(heval)/beta4) then
+    if(method == 2) then
       f1 = f2
       nhacc2 = -heval
-    ELSE
+    else
       nhacc2 = heval
-    END IF
+    end if
     pacc2 = facc2
-    CALL faccur(nhacc2,newh2,facc2,x0,f,twoinf,f0,f1)
-    IF(facc2 < pacc2) facc2 = (3*facc2+pacc2)/4.
-  END IF
-  IF(method == 1 .AND. newacc < facc1) newacc = facc1
-  IF(method == -1 .AND. newacc < facc2) newacc = facc2
-  IF(method == 2 .AND. newacc < (facc1+facc2)/2.) newacc = (facc1+facc2)/2.
-END IF
+    call faccur(nhacc2,newh2,facc2,x0,f,twoinf,f0,f1)
+    if(facc2 < pacc2) facc2 = (3*facc2+pacc2)/4.
+  end if
+  if(method == 1 .and. newacc < facc1) newacc = facc1
+  if(method == -1 .and. newacc < facc2) newacc = facc2
+  if(method == 2 .and. newacc < (facc1+facc2)/2.) newacc = (facc1+facc2)/2.
+end if
 
-!     EVALUATE SUCCESSIVE ELEMENTS OF THE CURRENT ROW IN THE NEVILLE
-!     ARRAY, ESTIMATING AND EXAMINING THE TRUNCATION AND ROUNDING
-!     ERRORS IN EACH
+!     evaluate successive elements of the current row in the neville
+!     array, estimating and examining the truncation and rounding
+!     errors in each
 
 contin = n < nmax
-hprev = ABS(h)
+hprev = abs(h)
 fmax = maxf(n)
-IF((method /= 2 .OR. iord == 2) .AND. fmax < ABS(f0)) fmax = ABS(f0)
+if((method /= 2 .or. iord == 2) .and. fmax < abs(f0)) fmax = abs(f0)
 
-DO  k = 1,n
+do  k = 1,n
   dprev = d(k)
   d(k) = dnew
   dnew = dprev+(dprev-dnew)/denom(k)
-  te = ABS(dnew-d(k))
-  IF(fmax < maxf(n-k)) fmax = maxf(n-k)
+  te = abs(dnew-d(k))
+  if(fmax < maxf(n-k)) fmax = maxf(n-k)
   hprev = hprev/beta
-  IF(newacc >= relacc*fmax) THEN
+  if(newacc >= relacc*fmax) then
     re = newacc*e(k)
-  ELSE
+  else
     re = relacc*fmax*e(k)
-  END IF
-  IF(re /= 0.) THEN
-    IF(hprev > 1) THEN
+  end if
+  if(re /= 0.) then
+    if(hprev > 1) then
       re = re/hprev**iord
-    ELSE IF(2*re > twosup*hprev**iord) THEN
+    else if(2*re > twosup*hprev**iord) then
       re = twosup/2.
-    ELSE
+    else
       re = re/hprev**iord
-    END IF
-  END IF
+    end if
+  end if
   newerr = te+re
-  IF(te > re) newerr = 1.25*newerr
-  IF(.NOT. ignore(k)) THEN
-    IF((init == 0 .OR. (k == 2 .AND. .NOT.ignore(1)))  &
-          .AND. newerr < error) THEN
+  if(te > re) newerr = 1.25*newerr
+  if(.not. ignore(k)) then
+    if((init == 0 .or. (k == 2 .and. .not.ignore(1)))  &
+          .and. newerr < error) then
       deriv = d(k)
       error = newerr
-    END IF
-    IF(init == 1 .AND. n == 1) THEN
+    end if
+    if(init == 1 .and. n == 1) then
       tderiv = d(1)
       temerr = newerr
-    END IF
-    IF(minerr(k) < twosup/4) THEN
+    end if
+    if(minerr(k) < twosup/4) then
       s = 4*minerr(k)
-    ELSE
+    else
       s = twosup
-    END IF
-    IF(te > re .OR. newerr > s) THEN
+    end if
+    if(te > re .or. newerr > s) then
       ignore(k) = .true.
-    ELSE
+    else
       contin = .true.
-    END IF
-    IF(newerr < minerr(k)) minerr(k) = newerr
-    IF(init == 1 .AND. n == 2 .AND. k == 1 .AND. .NOT.ignore(1)) THEN
-      IF(newerr < temerr) THEN
+    end if
+    if(newerr < minerr(k)) minerr(k) = newerr
+    if(init == 1 .and. n == 2 .and. k == 1 .and. .not.ignore(1)) then
+      if(newerr < temerr) then
         tderiv = d(1)
         temerr = newerr
-      END IF
-      IF(temerr < error) THEN
+      end if
+      if(temerr < error) then
         deriv = tderiv
         error = temerr
-      END IF
-    END IF
-  END IF
-END DO
+      end if
+    end if
+  end if
+end do
 
-IF(n < nmax) d(n+1) = dnew
-IF(eps < 0.) THEN
-  s = ABS(eps*deriv)
-ELSE
+if(n < nmax) d(n+1) = dnew
+if(eps < 0.) then
+  s = abs(eps*deriv)
+else
   s = eps
-END IF
-IF(error <= s) THEN
+end if
+if(error <= s) then
   contin = .false.
-ELSE IF(init == 1 .AND. (n == 2 .OR. ignore(1))) THEN
-  IF((ignore(1) .OR. ignore(2)) .AND. saved) THEN
+else if(init == 1 .and. (n == 2 .or. ignore(1))) then
+  if((ignore(1) .or. ignore(2)) .and. saved) then
     saved = .false.
     n = 2
-    h = beta * SAVE(0)
-    heval = beta*SAVE(1)
-    maxf(0) = SAVE(2)
-    maxf(1) = SAVE(3)
-    maxf(2) = SAVE(4)
-    d(1) = SAVE(5)
-    d(2) = SAVE(6)
-    d(3) = SAVE(7)
-    minerr(1) = SAVE(8)
-    minerr(2) = SAVE(9)
-    IF(method == 2 .AND. iord == 3) THEN
-      pdelta = SAVE(10)
-      deltaf = SAVE(11)
-      pmaxf = SAVE(12)
-      maxfun = SAVE(13)
-    ELSE IF(method /= 2 .AND. iord >= 2) THEN
-      f2 = SAVE(10)
-      f3 = SAVE(11)
-      IF(iord == 3) f4 = SAVE(12)
-    END IF
+    h = beta * save(0)
+    heval = beta*save(1)
+    maxf(0) = save(2)
+    maxf(1) = save(3)
+    maxf(2) = save(4)
+    d(1) = save(5)
+    d(2) = save(6)
+    d(3) = save(7)
+    minerr(1) = save(8)
+    minerr(2) = save(9)
+    if(method == 2 .and. iord == 3) then
+      pdelta = save(10)
+      deltaf = save(11)
+      pmaxf = save(12)
+      maxfun = save(13)
+    else if(method /= 2 .and. iord >= 2) then
+      f2 = save(10)
+      f3 = save(11)
+      if(iord == 3) f4 = save(12)
+    end if
     init = 0
     ignore(1) = .false.
     ignore(2) = .false.
-  ELSE IF(.NOT. (ignore(1) .OR. ignore(2)) .AND. n == 2  &
-        .AND. beta4*factor*ABS(heval) <= maxh) THEN
-!             SAVE ALL CURRENT VALUES IN CASE OF RETURN TO
-!                 CURRENT POINT
+  else if(.not. (ignore(1) .or. ignore(2)) .and. n == 2  &
+        .and. beta4*factor*abs(heval) <= maxh) then
+!             save all current values in case of return to
+!                 current point
     saved = .true.
-    SAVE(0) = h
-    SAVE(1) = heval
-    SAVE(2) = maxf(0)
-    SAVE(3) = maxf(1)
-    SAVE(4) = maxf(2)
-    SAVE(5) = d(1)
-    SAVE(6) = d(2)
-    SAVE(7) = d(3)
-    SAVE(8) = minerr(1)
-    SAVE(9) = minerr (2)
-    IF(method == 2 .AND. iord == 3) THEN
-      SAVE(10) = pdelta
-      SAVE(11) = deltaf
-      SAVE(12) = pmaxf
-      SAVE(13) = maxfun
-    ELSE IF(method /= 2 .AND. iord >= 2) THEN
-      SAVE(10) = f2
-      SAVE(11) = f3
-      IF(iord == 3) SAVE(12) = f4
-    END IF
+    save(0) = h
+    save(1) = heval
+    save(2) = maxf(0)
+    save(3) = maxf(1)
+    save(4) = maxf(2)
+    save(5) = d(1)
+    save(6) = d(2)
+    save(7) = d(3)
+    save(8) = minerr(1)
+    save(9) = minerr (2)
+    if(method == 2 .and. iord == 3) then
+      save(10) = pdelta
+      save(11) = deltaf
+      save(12) = pmaxf
+      save(13) = maxfun
+    else if(method /= 2 .and. iord >= 2) then
+      save(10) = f2
+      save(11) = f3
+      if(iord == 3) save(12) = f4
+    end if
     h = factor*baseh
     heval = h
     baseh = h
     n = -1
-  ELSE
+  else
     init = 0
     h = beta*h
     heval = beta*heval
-  END IF
-ELSE IF(contin .AND. beta*ABS(heval) <= maxh) THEN
+  end if
+else if(contin .and. beta*abs(heval) <= maxh) then
   h = beta*h
   heval = beta*heval
-ELSE IF(method /= 1) THEN
+else if(method /= 1) then
   contin = .true.
-  IF(method == 2) THEN
+  if(method == 2) then
     init = 3
     method = -1
-    IF(iord /= 2) THEN
-      IF(x0 /= 0.) THEN
-        CALL faccur(0.,-h0,acc0,x0,f,twoinf,f0,f1)
-      ELSE
+    if(iord /= 2) then
+      if(x0 /= 0.) then
+        dummy1 = 0.
+        dummy2 = -h0       
+        call faccur(dummy1,dummy2,acc0,x0,f,twoinf,f0,f1)
+      else
         acc0 = 0.
-      END IF
-    END IF
-  ELSE
+      end if
+    end if
+  else
     init = 2
     method = 1
-  END IF
+  end if
   n = -1
   signh = -signh
-ELSE
+else
   contin = .false.
-END IF
-GO TO 130
-800 IF(eps < 0.) THEN
-  s = ABS(eps*deriv)
-ELSE
+end if
+go to 130
+800 if(eps < 0.) then
+  s = abs(eps*deriv)
+else
   s = eps
-END IF
+end if
 ifail = 0
-IF(eps /= 0. .AND. error > s) ifail = 1
-RETURN
-END SUBROUTINE diff
-!DECK FACCUR
+if(eps /= 0. .and. error > s) ifail = 1
+return
+end subroutine diff
+!deck faccur
 
-SUBROUTINE faccur(h0,h1,facc,x0,f,twoinf,f0,f1)
+subroutine faccur(h0,h1,facc,x0,f,twoinf,f0,f1)
 
-REAL, INTENT(IN OUT)                     :: h0
-REAL, INTENT(OUT)                        :: h1
-REAL, INTENT(OUT)                        :: facc
-REAL, INTENT(IN OUT)                     :: x0
-REAL, INTENT(IN)                         :: f
-REAL, INTENT(IN)                         :: twoinf
-REAL, INTENT(IN)                         :: f0
-REAL, INTENT(IN)                         :: f1
-REAL :: a0,a1,f00,f2,deltaf,t0,t1, df(5), f1
-INTEGER :: j
-EXTERNAL f
+real, intent(in out)                     :: h0
+real, intent(out)                        :: h1
+real, intent(out)                        :: facc
+real, intent(in)                         :: x0
+real, intent(in)                         :: twoinf
+real, intent(in)                         :: f0
+real, intent(in)                         :: f1
+real :: a0,a1,f00,f2,deltaf,t0,t1, df(5)
+integer :: j
+procedure(func) :: f
 
 t0 = 0.
 t1 = 0.
-IF(h0 /= 0.) THEN
-  IF(x0+h0 /= 0.) THEN
+if(h0 /= 0.) then
+  if(x0+h0 /= 0.) then
     f00 = f1
-  ELSE
+  else
     h0 = 0.875*h0
     f00 = f(x0+h0)
-  END IF
-  IF(ABS(h1) >= 32.*twoinf) h1 = h1/8.
-  IF(16.*ABS(h1) > ABS(h0)) h1 = SIGN(h1,1.)*ABS(h0)/16.
-  IF(f(x0+h0-h1) == f00) THEN
-    IF(256.*ABS(h1) <= ABS(h0)) THEN
+  end if
+  if(abs(h1) >= 32.*twoinf) h1 = h1/8.
+  if(16.*abs(h1) > abs(h0)) h1 = sign(h1,1.)*abs(h0)/16.
+  if(f(x0+h0-h1) == f00) then
+    if(256.*abs(h1) <= abs(h0)) then
       h1 = 2.*h1
-      10             IF(f(x0+h0-h1) /= f00 .OR. 256.*ABS(h1) > ABS(h0))  &
-          GO TO 20
+      10             if(f(x0+h0-h1) /= f00 .or. 256.*abs(h1) > abs(h0))  &
+          go to 20
       h1 = 2.*h1
-      GO TO 10
+      go to 10
       20             h1 = 8.*h1
       
-    ELSE
-      h1 = SIGN(h1,1.)*ABS(h0)/16.
-    END IF
-  ELSE
-    IF(256.*twoinf <= ABS(h0)) THEN
-      30             IF(f(x0+h0-h1/2.) == f00 .OR. ABS(h1) < 4.*twoinf)  &
-          GO TO 40
+    else
+      h1 = sign(h1,1.)*abs(h0)/16.
+    end if
+  else
+    if(256.*twoinf <= abs(h0)) then
+      30             if(f(x0+h0-h1/2.) == f00 .or. abs(h1) < 4.*twoinf)  &
+          go to 40
       h1 = h1/2.
-      GO TO 30
-      40             CONTINUE
+      go to 30
+      40             continue
       h1 = 8.*h1
-      IF(16.*ABS(h1) > ABS(h0)) h1 = SIGN(h1,1.) *ABS(h0)/16.
-    ELSE
-      h1 = SIGN(h1,1.)*ABS(h0)/16.
-    END IF
-  END IF
-ELSE
+      if(16.*abs(h1) > abs(h0)) h1 = sign(h1,1.) *abs(h0)/16.
+    else
+      h1 = sign(h1,1.)*abs(h0)/16.
+    end if
+  end if
+else
   f00 = f0
-END IF
+end if
 
-DO  j = 1,5
-  f2 = f(x0+h0-FLOAT(2*j-1)*h1)
+do  j = 1,5
+  f2 = f(x0+h0-float(2*j-1)*h1)
   df(j) = f2 - f00
   t0 = t0+df(j)
-  t1 = t1+FLOAT(2*j-1)*df(j)
-END DO
+  t1 = t1+float(2*j-1)*df(j)
+end do
 a0 = (33.*t0-5.*t1)/73.
 a1 = (-5.*t0+1.2*t1)/73.
-facc = ABS(a0)
-DO  j = 1,5
-  deltaf = ABS(df(j)-(a0+FLOAT(2*j-1)*a1))
-  IF(facc < deltaf) facc = deltaf
-END DO
+facc = abs(a0)
+do  j = 1,5
+  deltaf = abs(df(j)-(a0+float(2*j-1)*a1))
+  if(facc < deltaf) facc = deltaf
+end do
 facc = 2.*facc
-RETURN
-END SUBROUTINE faccur
+return
+end subroutine faccur
+
+
+
+!deck i1mach
+      integer function i1mach (i)
+      implicit none
+      integer :: i
+      real :: x
+      double precision :: xx
+!***begin prologue  i1mach
+!***purpose  return integer machine dependent constants.
+!***library   slatec
+!***category  r1
+!***type      integer (i1mach-i)
+!***keywords  machine constants
+!***author  fox, p. a., (bell labs)
+!           hall, a. d., (bell labs)
+!           schryer, n. l., (bell labs)
+!***description
+!
+!   i1mach can be used to obtain machine-dependent parameters for the
+!   local machine environment.  it is a function subprogram with one
+!   (input) argument and can be referenced as follows:
+!
+!        k = i1mach(i)
+!
+!   where i=1,...,16.  the (output) value of k above is determined by
+!   the (input) value of i.  the results for various values of i are
+!   discussed below.
+!
+!   i/o unit numbers:
+!     i1mach( 1) = the standard input unit.
+!     i1mach( 2) = the standard output unit.
+!     i1mach( 3) = the standard punch unit.
+!     i1mach( 4) = the standard error message unit.
+!
+!   words:
+!     i1mach( 5) = the number of bits per integer storage unit.
+!     i1mach( 6) = the number of characters per integer storage unit.
+!
+!   integers:
+!     assume integers are represented in the s-digit, base-a form
+!
+!                sign ( x(s-1)*a**(s-1) + ... + x(1)*a + x(0) )
+!
+!                where 0 .le. x(i) .lt. a for i=0,...,s-1.
+!     i1mach( 7) = a, the base.
+!     i1mach( 8) = s, the number of base-a digits.
+!     i1mach( 9) = a**s - 1, the largest magnitude.
+!
+!   floating-point numbers:
+!     assume floating-point numbers are represented in the t-digit,
+!     base-b form
+!                sign (b**e)*( (x(1)/b) + ... + (x(t)/b**t) )
+!
+!                where 0 .le. x(i) .lt. b for i=1,...,t,
+!                0 .lt. x(1), and emin .le. e .le. emax.
+!     i1mach(10) = b, the base.
+!
+!   single-precision:
+!     i1mach(11) = t, the number of base-b digits.
+!     i1mach(12) = emin, the smallest exponent e.
+!     i1mach(13) = emax, the largest exponent e.
+!
+!   double-precision:
+!     i1mach(14) = t, the number of base-b digits.
+!     i1mach(15) = emin, the smallest exponent e.
+!     i1mach(16) = emax, the largest exponent e.
+!
+!   to alter this function for a particular environment, the desired
+!   set of data statements should be activated by removing the c from
+!   column 1.  also, the values of i1mach(1) - i1mach(4) should be
+!   checked for consistency with the local operating system.
+!
+!***references  p. a. fox, a. d. hall and n. l. schryer, framework for
+!                 a portable library, acm transactions on mathematical
+!                 software 4, 2 (june 1978), pp. 177-188.
+!***routines called  (none)
+!***revision history  (yymmdd)
+!   750101  date written
+!   960411  modified for fortran 90 (be after suggestions by ehg).   
+!   980727  modified value of i1mach(6) (be after suggestion by ehg).   
+!***end prologue  i1mach
+!
+      x  = 1.0      
+      xx = 1.0d0
+
+      select case (i)
+        case (1)
+          i1mach = 5 ! input unit
+        case (2)
+          i1mach = 6 ! output unit
+        case (3)
+          i1mach = 0 ! punch unit is no longer used
+        case (4)
+          i1mach = 0 ! error message unit
+        case (5)
+          i1mach = bit_size(i)
+        case (6)
+          i1mach = 4            ! characters per integer is hopefully no
+                                ! longer used. 
+                                ! if it is used it has to be set manually.
+                                ! the value 4 is correct on ieee-machines.
+        case (7)
+          i1mach = radix(1)
+        case (8)
+          i1mach = bit_size(i) - 1
+        case (9)
+          i1mach = huge(1)
+        case (10)
+          i1mach = radix(x)
+        case (11)
+          i1mach = digits(x)
+        case (12)
+          i1mach = minexponent(x)
+        case (13)
+          i1mach = maxexponent(x)
+        case (14)
+          i1mach = digits(xx)
+        case (15)
+          i1mach = minexponent(xx)
+        case (16)
+          i1mach = maxexponent(xx) 
+        case default
+          write (*, fmt = 9000)
+ 9000     format ('1error    1 in i1mach - i out of bounds')
+          stop
+        end select
+      return
+      end
+
+
+	end module diff_module
