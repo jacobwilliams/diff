@@ -4,11 +4,20 @@
 	
 	implicit none
 	
+	
+	integer, parameter :: sp = selected_real_kind(6, 37)	!single
+	integer, parameter :: dp = selected_real_kind(15, 307)	!double
+	integer, parameter :: qp = selected_real_kind(33, 4931)	!quad
+	
+	!using double precision by default:
+	integer,parameter,public :: wp = sp
+	
 	abstract interface
 		function func(x) result(fx)
+			import :: wp
 			implicit none
-			real,intent(in) :: x
-			real :: fx	
+			real(wp),intent(in) :: x
+			real(wp) :: fx	
 		end function func	
 	end interface
 	
@@ -42,7 +51,7 @@ subroutine diff(iord,x0,xmin,xmax,f,eps,acc,deriv,error,ifail)
 ! xmin, xmax restrict the interpolating points to lie in [xmin, xmax], which
 !   should be the largest interval including x0 in which the function is
 !   calculable and continuous.
-! f, a real procedure supplied by the user, must yield the value of the
+! f, a real(wp) procedure supplied by the user, must yield the value of the
 !   function at x for any x in [xmin, xmax] when called by f(x).
 ! eps denotes the tolerance, either absolute or relative.  eps=0 specifies that
 !   the error is to be minimised, while eps>0 or eps<0 specifies that the
@@ -69,18 +78,18 @@ subroutine diff(iord,x0,xmin,xmax,f,eps,acc,deriv,error,ifail)
 !   3   the interval [xmin, xmax] is too small (derivative and error will be
 !          undefined);
 
-integer, intent(in)                      :: iord
-real, intent(in)                         :: x0
-real, intent(in)                         :: xmin
-real, intent(in)                         :: xmax
-real, intent(in)                         :: eps
-real, intent(in out)                     :: acc
-real, intent(out)                        :: deriv
-real, intent(out)                        :: error
-integer, intent(out)                     :: ifail
+integer, intent(in)          :: iord
+real(wp), intent(in)         :: x0
+real(wp), intent(in)         :: xmin
+real(wp), intent(in)         :: xmax
+real(wp), intent(in)         :: eps
+real(wp), intent(in out)     :: acc
+real(wp), intent(out)        :: deriv
+real(wp), intent(out)        :: error
+integer, intent(out)         :: ifail
 procedure(func) :: f
 
-real :: beta,beta4,h,h0,h1,h2,  &
+real(wp) :: beta,beta4,h,h0,h1,h2,  &
     newh1,newh2,heval,hprev,baseh,hacc1,hacc2,nhacc1,  &
     nhacc2,minh,maxh,maxh1,maxh2,tderiv,f0,twof0,f1,f2,f3,f4,fmax,  &
     maxfun,pmaxf,df1,deltaf,pdelta,z,zpower,c0f0,c1,c2,c3,dnew,dprev,  &
@@ -89,13 +98,13 @@ real :: beta,beta4,h,h0,h1,h2,  &
     d(10),denom(10),e(10),minerr(10),maxf(0:10),save(0:13), storef(-45:45),factor
 integer :: eta,inf,sup,i,j,k,n,nmax,method,signh,fcount, init
 logical :: ignore(10),contin,saved
-real :: dummy1,dummy2
+real(wp) :: dummy1,dummy2
 
 ! eta is the minimum number of significant binary digits (apart from the
-! sign digit) used to represent the mantissa of real numbers. it should
+! sign digit) used to represent the mantissa of real(wp) numbers. it should
 ! be devreased by one if the computer truncates rather than rounds.
 ! inf, sup are the largest possible positive integers subject to
-! 2**(-inf), -2**(-inf), 2**sup, and -2**sup all being representable real
+! 2**(-inf), -2**(-inf), 2**sup, and -2**sup all being representable real(wp)
 ! numbers.
 eta=i1mach(11) - 1
 inf=-i1mach(12) - 2
@@ -649,14 +658,14 @@ end subroutine diff
 
 subroutine faccur(h0,h1,facc,x0,f,twoinf,f0,f1)
 
-real, intent(in out)                     :: h0
-real, intent(out)                        :: h1
-real, intent(out)                        :: facc
-real, intent(in)                         :: x0
-real, intent(in)                         :: twoinf
-real, intent(in)                         :: f0
-real, intent(in)                         :: f1
-real :: a0,a1,f00,f2,deltaf,t0,t1, df(5)
+real(wp), intent(in out)                     :: h0
+real(wp), intent(out)                        :: h1
+real(wp), intent(out)                        :: facc
+real(wp), intent(in)                         :: x0
+real(wp), intent(in)                         :: twoinf
+real(wp), intent(in)                         :: f0
+real(wp), intent(in)                         :: f1
+real(wp) :: a0,a1,f00,f2,deltaf,t0,t1, df(5)
 integer :: j
 procedure(func) :: f
 
@@ -717,135 +726,70 @@ facc = 2.*facc
 return
 end subroutine faccur
 
+	integer function i1mach (i)
+	implicit none
+	integer :: i
+	real(wp),parameter :: x = 1.0_wp
+
+	select case(i)
+	case (11)
+		i1mach = digits(x)		!t, the number of base-b digits.
+	case (12)
+		i1mach = minexponent(x)	!emin, the smallest exponent e.
+	case (13)
+		i1mach = maxexponent(x)	!emax, the largest exponent e.
+	end select
+	
+	end function i1mach
 
 
-!deck i1mach
-      integer function i1mach (i)
-      implicit none
-      integer :: i
-      real :: x
-      double precision :: xx
-!***begin prologue  i1mach
-!***purpose  return integer machine dependent constants.
-!***library   slatec
-!***category  r1
-!***type      integer (i1mach-i)
-!***keywords  machine constants
-!***author  fox, p. a., (bell labs)
-!           hall, a. d., (bell labs)
-!           schryer, n. l., (bell labs)
-!***description
-!
-!   i1mach can be used to obtain machine-dependent parameters for the
-!   local machine environment.  it is a function subprogram with one
-!   (input) argument and can be referenced as follows:
-!
-!        k = i1mach(i)
-!
-!   where i=1,...,16.  the (output) value of k above is determined by
-!   the (input) value of i.  the results for various values of i are
-!   discussed below.
-!
-!   i/o unit numbers:
-!     i1mach( 1) = the standard input unit.
-!     i1mach( 2) = the standard output unit.
-!     i1mach( 3) = the standard punch unit.
-!     i1mach( 4) = the standard error message unit.
-!
-!   words:
-!     i1mach( 5) = the number of bits per integer storage unit.
-!     i1mach( 6) = the number of characters per integer storage unit.
-!
-!   integers:
-!     assume integers are represented in the s-digit, base-a form
-!
-!                sign ( x(s-1)*a**(s-1) + ... + x(1)*a + x(0) )
-!
-!                where 0 .le. x(i) .lt. a for i=0,...,s-1.
-!     i1mach( 7) = a, the base.
-!     i1mach( 8) = s, the number of base-a digits.
-!     i1mach( 9) = a**s - 1, the largest magnitude.
-!
-!   floating-point numbers:
-!     assume floating-point numbers are represented in the t-digit,
-!     base-b form
-!                sign (b**e)*( (x(1)/b) + ... + (x(t)/b**t) )
-!
-!                where 0 .le. x(i) .lt. b for i=1,...,t,
-!                0 .lt. x(1), and emin .le. e .le. emax.
-!     i1mach(10) = b, the base.
-!
-!   single-precision:
-!     i1mach(11) = t, the number of base-b digits.
-!     i1mach(12) = emin, the smallest exponent e.
-!     i1mach(13) = emax, the largest exponent e.
-!
-!   double-precision:
-!     i1mach(14) = t, the number of base-b digits.
-!     i1mach(15) = emin, the smallest exponent e.
-!     i1mach(16) = emax, the largest exponent e.
-!
-!   to alter this function for a particular environment, the desired
-!   set of data statements should be activated by removing the c from
-!   column 1.  also, the values of i1mach(1) - i1mach(4) should be
-!   checked for consistency with the local operating system.
-!
-!***references  p. a. fox, a. d. hall and n. l. schryer, framework for
-!                 a portable library, acm transactions on mathematical
-!                 software 4, 2 (june 1978), pp. 177-188.
-!***routines called  (none)
-!***revision history  (yymmdd)
-!   750101  date written
-!   960411  modified for fortran 90 (be after suggestions by ehg).   
-!   980727  modified value of i1mach(6) (be after suggestion by ehg).   
-!***end prologue  i1mach
-!
-      x  = 1.0      
-      xx = 1.0d0
+	subroutine test_case()
+	implicit none
+	
+	integer,parameter  :: iord = 1
+	real(wp),parameter :: x0    = 0.12345_wp
+	real(wp),parameter :: xmin  = 0.0_wp
+	real(wp),parameter :: xmax  = 1.0_wp
+	real(wp),parameter :: eps   = 1.0e-5_wp
 
-      select case (i)
-        case (1)
-          i1mach = 5 ! input unit
-        case (2)
-          i1mach = 6 ! output unit
-        case (3)
-          i1mach = 0 ! punch unit is no longer used
-        case (4)
-          i1mach = 0 ! error message unit
-        case (5)
-          i1mach = bit_size(i)
-        case (6)
-          i1mach = 4            ! characters per integer is hopefully no
-                                ! longer used. 
-                                ! if it is used it has to be set manually.
-                                ! the value 4 is correct on ieee-machines.
-        case (7)
-          i1mach = radix(1)
-        case (8)
-          i1mach = bit_size(i) - 1
-        case (9)
-          i1mach = huge(1)
-        case (10)
-          i1mach = radix(x)
-        case (11)
-          i1mach = digits(x)
-        case (12)
-          i1mach = minexponent(x)
-        case (13)
-          i1mach = maxexponent(x)
-        case (14)
-          i1mach = digits(xx)
-        case (15)
-          i1mach = minexponent(xx)
-        case (16)
-          i1mach = maxexponent(xx) 
-        case default
-          write (*, fmt = 9000)
- 9000     format ('1error    1 in i1mach - i out of bounds')
-          stop
-        end select
-      return
-      end
+	real(wp) :: acc
+	real(wp) :: deriv
+	real(wp) :: error
+	integer  :: ifail
 
+	acc = 0.0_wp
+	
+	call diff(iord,x0,xmin,xmax,test_function,eps,acc,deriv,error,ifail)
+	
+	write(*,*) ''
+	write(*,*) 'solution          :',deriv
+	write(*,*) 'estimated error   :',error
+	write(*,*) 'ifail             :',ifail
+	write(*,*) ''
+	write(*,*) 'actual derivative :', cos(x0)
+	write(*,*) 'actual error      :', cos(x0) - deriv
+	write(*,*) ''
+	
+	contains
+	
+		function test_function(x) result(fx)
+		implicit none
+		real(wp),intent(in) :: x
+		real(wp) :: fx
+		
+		fx = sin(x)
+		
+		end function test_function
+	
+	end subroutine test_case
 
 	end module diff_module
+
+	
+	program test
+	
+	use diff_module
+	
+	call test_case()
+	
+	end program test
