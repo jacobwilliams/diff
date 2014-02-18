@@ -4,6 +4,7 @@
 	
 	implicit none	
 	
+	!parameters:
 	integer, parameter :: sp = selected_real_kind(6, 37)	!single
 	integer, parameter :: dp = selected_real_kind(15, 307)	!double
 	integer, parameter :: qp = selected_real_kind(33, 4931)	!quad
@@ -13,15 +14,17 @@
 	
 	private
 	
+	!interface of function:
 	abstract interface
 		function func(x) result(fx)
 			import :: wp
 			implicit none
 			real(wp),intent(in) :: x
-			real(wp) :: fx	
-		end function func	
+			real(wp) :: fx
+		end function func
 	end interface
 	
+	!public routines:
 	public :: diff
 	public :: test_case
 		
@@ -29,14 +32,14 @@
 !*****************************************************************************************
 
 !*****************************************************************************************
-	subroutine diff(iord,x0,xmin,xmax,f,eps,acc,deriv,error,ifail)
+	subroutine diff(iord,x0,xmin,xmax,f,eps,accr,deriv,error,ifail)
 !*****************************************************************************************
 !
-!             numerical differentiation of user defined function
+!DESCRIPTION
 !
-!                         david kahaner, nbs (gaithersburg)
+!	numerical differentiation of user defined function
 !
-!  the procedure differentiate calculates the first, second or
+!   the procedure differentiate calculates the first, second or
 !   third order derivative of a function by using neville's process to
 !   extrapolate from a sequence of simple polynomial approximations based on
 !   interpolating points distributed symmetrically about x0 (or lying only on
@@ -46,7 +49,8 @@
 !   set to zero then the result having the minimum achievable estimated error
 !   is returned instead.
 !
-! input parameters:
+!INPUTS
+!
 ! iord = 1, 2 or 3 specifies that the first, second or third order
 !   derivative,respectively, is required.
 ! x0 is the point at which the derivative of the function is to be calculated.
@@ -61,12 +65,13 @@
 !   possible.  the accuracy requirement should not be made stricter than
 !   necessary, since the amount of computation tends to increase as
 !   the magnitude of eps decreases, and is particularly high when eps=0.
-! acc denotes that the absolute (acc>0) or relative (acc<0) errors in the
-!   computed values of the function are most unlikely to exceed abs(acc), which
-!   should be as small as possible.  if the user cannot estimate acc with
+! accr denotes that the absolute (accr>0) or relative (accr<0) errors in the
+!   computed values of the function are most unlikely to exceed abs(accr), which
+!   should be as small as possible.  if the user cannot estimate accr with
 !   complete confidence, then it should be set to zero.
 !
-! output parameters:
+!OUTPUTS
+!
 ! deriv is the calculated value of the derivative.
 ! error is an estimated upper bound on the magnitude of the absolute error in
 !   the calculated result.  it should always be examined, since in extreme case
@@ -78,7 +83,15 @@
 !          error, but the most accurate result possible has been returned.
 !   2   input data incorrect (derivative and error will be undefined).
 !   3   the interval [xmin, xmax] is too small (derivative and error will be
-!          undefined);
+!          undefined)
+!
+!AUTHORS
+!
+!	David Kahaner, NBS (Gaithersburg)
+!		Original code: ftp://math.nist.gov/pub/repository/diff/src/DIFF
+!	Jacob Williams : 2/17/2013 : 
+!		Converted to modern Fortran.
+!		Some refactoring, addition of test cases.
 !
 !*****************************************************************************************
 
@@ -89,19 +102,19 @@
 	real(wp), intent(in)    :: xmin
 	real(wp), intent(in)    :: xmax
 	real(wp), intent(in)    :: eps
-	real(wp), intent(inout) :: acc
+	real(wp), intent(in)    :: accr
 	real(wp), intent(out)   :: deriv
 	real(wp), intent(out)   :: error
 	integer, intent(out)    :: ifail
 	procedure(func)         :: f
 
-	real(wp) :: beta,beta4,h,h0,h1,h2,  &
+	real(wp) :: acc,beta,beta4,h,h0,h1,h2,  &
 		newh1,newh2,heval,hprev,baseh,hacc1,hacc2,nhacc1,  &
 		nhacc2,minh,maxh,maxh1,maxh2,tderiv,f0,twof0,f1,f2,f3,f4,fmax,  &
 		maxfun,pmaxf,df1,deltaf,pdelta,z,zpower,c0f0,c1,c2,c3,dnew,dprev,  &
 		re,te,newerr,temerr,newacc,pacc1,pacc2,facc1,facc2,acc0,  &
 		acc1,acc2,relacc,twoinf,twosup,s,  &
-		d(10),denom(10),e(10),minerr(10),maxf(0:10),save(0:13), storef(-45:45),factor
+		d(10),denom(10),e(10),minerr(10),maxf(0:10),save(0:13),storef(-45:45),factor
 	integer :: i,j,k,n,nmax,method,signh,fcount, init
 	logical :: ignore(10),contin,saved
 	real(wp) :: dummy1,dummy2
@@ -125,6 +138,7 @@
 	  
 	else
 
+		acc = accr
 		twoinf = 2.0_wp**(-inf)
 		twosup = 2.0_wp**sup
 		factor = 2.0_wp**(real((inf+sup),wp)/30.0_wp)
@@ -278,14 +292,14 @@
 			  z = beta
 			  if (method == 2) z = z**2
 			  zpower = 1.0_wp
-			  do  k = 1,nmax
+			  do k = 1,nmax
 				zpower = z*zpower
 				denom(k) = zpower-1
 			  end do
 			  if (method == 2 .and. iord == 1) then
 				e(1) = 5.0_wp
 				e(2) = 6.3_wp
-				do  i = 3,nmax
+				do i = 3,nmax
 				  e(i) = 6.81_wp
 				end do
 			  else if ((method /= 2 .and. iord == 1) .or. &
@@ -295,11 +309,11 @@
 				e(3) = 20.36_wp
 				e(4) = 23.0_wp
 				e(5) = 24.46_wp
-				do  i = 6,nmax
+				do i = 6,nmax
 				  e(i) = 26.0_wp
 				end do
 				if (method == 2.and.iord == 2) then
-				  do  i = 1,nmax
+				  do i = 1,nmax
 					e(i)=2.0_wp*e(i)
 				  end do
 				end if
@@ -309,7 +323,7 @@
 				e(3) = 39.66_wp
 				e(4) = 46.16_wp
 				e(5) = 50.26_wp
-				do  i = 6,nmax
+				do i = 6,nmax
 				  e(i) = 55.0_wp
 				end do
 			  else if (method == 2.and.iord == 3) then
@@ -318,7 +332,7 @@
 				e(3) = 50.95_wp
 				e(4) = 56.4_wp
 				e(5) = 59.3_wp
-				do  i = 6,nmax
+				do i = 6,nmax
 				  e(i) = 62.0_wp
 				end do
 			  else
@@ -327,7 +341,7 @@
 				e(3) = 52.78_wp
 				e(4) = 61.2_wp
 				e(5) = 66.55_wp
-				do  i = 6,nmax
+				do i = 6,nmax
 				  e(i) = 73.0_wp
 				end do
 				c0f0 = -twof0/(3.0_wp*beta)
@@ -345,7 +359,7 @@
 			  baseh = heval
 			  maxh = maxh2
 			  if (method == 1)maxh = maxh1
-			  do  k = 1,nmax
+			  do k = 1,nmax
 				minerr(k) = twosup
 				ignore(k) = .false.
 			  end do
@@ -425,7 +439,7 @@
 
 			if (n > nmax) then
 			  n = nmax
-			  do  i = 1,n
+			  do i = 1,n
 				maxf(i-1) = maxf(i)
 			  end do
 			end if
@@ -495,7 +509,8 @@
 			  end if
 			  if (method == 1 .and. newacc < facc1) newacc = facc1
 			  if (method == -1 .and. newacc < facc2) newacc = facc2
-			  if (method == 2 .and. newacc < (facc1+facc2)/2.0_wp) newacc = (facc1+facc2)/2.0_wp
+			  if (method == 2 .and. newacc < (facc1+facc2)/2.0_wp) &
+			  		newacc = (facc1+facc2)/2.0_wp
 			end if
 
 			! evaluate successive elements of the current row in the neville
@@ -507,7 +522,7 @@
 			fmax = maxf(n)
 			if ((method /= 2 .or. iord == 2) .and. fmax < abs(f0)) fmax = abs(f0)
 
-			do  k = 1,n
+			do k = 1,n
 			  dprev = d(k)
 			  d(k) = dnew
 			  dnew = dprev+(dprev-dnew)/denom(k)
@@ -682,7 +697,7 @@
 	implicit none
 	
 	real(wp), intent(inout)  :: h0
-	real(wp), intent(out)    :: h1
+	real(wp), intent(inout)  :: h1
 	real(wp), intent(out)    :: facc
 	real(wp), intent(in)     :: x0
 	real(wp), intent(in)     :: twoinf
@@ -731,7 +746,7 @@
 	  f00 = f0
 	end if
 
-	do  j = 1,5
+	do j = 1,5
 	  f2 = f(x0+h0-real(2*j-1,wp)*h1)
 	  df(j) = f2 - f00
 	  t0 = t0+df(j)
@@ -740,7 +755,7 @@
 	a0 = (33.0_wp*t0-5.0_wp*t1)/73.0_wp
 	a1 = (-5.0_wp*t0+1.2_wp*t1)/73.0_wp
 	facc = abs(a0)
-	do  j = 1,5
+	do j = 1,5
 	  deltaf = abs(df(j)-(a0+real(2*j-1,wp)*a1))
 	  if (facc < deltaf) facc = deltaf
 	end do
@@ -761,36 +776,86 @@
 	real(wp),parameter :: xmin  = 0.0_wp
 	real(wp),parameter :: xmax  = 1.0_wp
 	real(wp),parameter :: eps   = 1.0e-9_wp
-
-	real(wp) :: acc
-	real(wp) :: deriv
-	real(wp) :: error
-	integer  :: ifail
-
-	acc = 0.0_wp
+	real(wp),parameter :: acc   = 0.0_wp
 	
-	call diff(iord,x0,xmin,xmax,test_function,eps,acc,deriv,error,ifail)
+	real(wp) :: deriv, error
+	integer  :: ifail, ifunc
 	
-	write(*,*) ''
-	write(*,*) 'solution          :',deriv
-	write(*,*) 'estimated error   :',error
-	write(*,*) 'ifail             :',ifail
-	write(*,*) ''
-	write(*,*) 'actual derivative :', cos(x0)
-	write(*,*) 'actual error      :', cos(x0) - deriv
-	write(*,*) ''
+	ifunc = 0
+	call diff(iord,x0,xmin,xmax,sin_func,eps,acc,deriv,error,ifail)
+	call write_results(cos(x0))
+	
+	ifunc = 0
+	call diff(iord,x0,xmin,xmax,test_func_1,eps,acc,deriv,error,ifail)
+	call write_results(cos(x0) - sin(x0) + 2.0_wp*x0)
+	
+	ifunc = 0
+	call diff(iord,x0,xmin,xmax,test_func_2,eps,acc,deriv,error,ifail)
+	call write_results(6.0_wp*x0**5 + 5.0_wp*x0**4 + 4.0_wp*x0**3 + 2.0_wp*x0 + 1.0_wp)
 	
 	contains
 	
-		function test_function(x) result(fx)
+	!***********************************************************
+		subroutine write_results(truth)
+	!***********************************************************
+		implicit none
+		real(wp),intent(in) :: truth
+		
+		write(*,'(A)') ''
+		write(*,'(A,E25.16)') 'solution          :', deriv
+		write(*,'(A,E25.16)') 'actual derivative :', truth
+		write(*,'(A,E25.16)') 'estimated error   :', error
+		write(*,'(A,E25.16)') 'actual error      :', truth - deriv
+		write(*,'(A,I5)')     'ifail             :', ifail
+		write(*,'(A,I5)')     'func evaluations  :', ifunc
+		write(*,'(A)') ''
+		
+	!***********************************************************
+		end subroutine write_results
+	!***********************************************************
+		
+	!***********************************************************
+		function sin_func(x) result(fx)
+	!***********************************************************
 		implicit none
 		real(wp),intent(in) :: x
 		real(wp) :: fx
 		
+		ifunc = ifunc + 1
 		fx = sin(x)
+				
+	!***********************************************************
+		end function sin_func
+	!***********************************************************
 		
-		end function test_function
-	
+	!***********************************************************
+		function test_func_1(x) result(fx)
+	!***********************************************************
+		implicit none
+		real(wp),intent(in) :: x
+		real(wp) :: fx
+		
+		ifunc = ifunc + 1
+		fx = sin(x) + cos(x) + x**2
+				
+	!***********************************************************
+		end function test_func_1		
+	!***********************************************************
+
+	!***********************************************************
+		function test_func_2(x) result(fx)
+	!***********************************************************
+		implicit none
+		real(wp),intent(in) :: x
+		real(wp) :: fx
+		
+		ifunc = ifunc + 1
+		fx = x**6 + x**5 + x**4 + x**2 + x
+				
+	!***********************************************************
+		end function test_func_2
+	!***********************************************************
+				
 !*****************************************************************************************
 	end subroutine test_case
 !*****************************************************************************************
@@ -799,9 +864,9 @@
 	end module diff_module
 !*****************************************************************************************
 	
-!*****************************************************************************************
+!***************************
 	program test
-!*****************************************************************************************
+!***************************
 	
 	use diff_module
 
@@ -809,6 +874,6 @@
 		
 	call test_case()
 	
-!*****************************************************************************************
+!***************************
 	end program test
-!*****************************************************************************************
+!***************************
