@@ -1,9 +1,8 @@
-!deck diff
-
+!*****************************************************************************************
 	module diff_module
+!*****************************************************************************************
 	
-	implicit none
-	
+	implicit none	
 	
 	integer, parameter :: sp = selected_real_kind(6, 37)	!single
 	integer, parameter :: dp = selected_real_kind(15, 307)	!double
@@ -20,16 +19,18 @@
 			real(wp) :: fx	
 		end function func	
 	end interface
-	
-	
+		
 	contains
+!*****************************************************************************************
 	
 
 ! code converted using to_f90 by alan miller
 ! date: 2014-02-17  time: 20:23:56
 
-subroutine diff(iord,x0,xmin,xmax,f,eps,acc,deriv,error,ifail)
-
+!*****************************************************************************************
+	subroutine diff(iord,x0,xmin,xmax,f,eps,acc,deriv,error,ifail)
+!*****************************************************************************************
+!
 !             numerical differentiation of user defined function
 !
 !                         david kahaner, nbs (gaithersburg)
@@ -77,17 +78,21 @@ subroutine diff(iord,x0,xmin,xmax,f,eps,acc,deriv,error,ifail)
 !   2   input data incorrect (derivative and error will be undefined).
 !   3   the interval [xmin, xmax] is too small (derivative and error will be
 !          undefined);
+!
+!*****************************************************************************************
 
-integer, intent(in)          :: iord
-real(wp), intent(in)         :: x0
-real(wp), intent(in)         :: xmin
-real(wp), intent(in)         :: xmax
-real(wp), intent(in)         :: eps
-real(wp), intent(in out)     :: acc
-real(wp), intent(out)        :: deriv
-real(wp), intent(out)        :: error
-integer, intent(out)         :: ifail
-procedure(func) :: f
+	implicit none
+	
+integer, intent(in)     :: iord
+real(wp), intent(in)    :: x0
+real(wp), intent(in)    :: xmin
+real(wp), intent(in)    :: xmax
+real(wp), intent(in)    :: eps
+real(wp), intent(inout) :: acc
+real(wp), intent(out)   :: deriv
+real(wp), intent(out)   :: error
+integer, intent(out)    :: ifail
+procedure(func)         :: f
 
 real(wp) :: beta,beta4,h,h0,h1,h2,  &
     newh1,newh2,heval,hprev,baseh,hacc1,hacc2,nhacc1,  &
@@ -109,38 +114,38 @@ real(wp) :: dummy1,dummy2
 eta=i1mach(11) - 1
 inf=-i1mach(12) - 2
 sup=i1mach(13) - 1
-if(iord < 1 .or. iord > 3 .or. xmax <= xmin .or.  &
-      x0 > xmax .or. x0 < xmin) then
+
+if (iord < 1 .or. iord > 3 .or. xmax <= xmin .or. x0 > xmax .or. x0 < xmin) then
   ifail = 2
   return
 end if
 
-twoinf = 2.**(-inf)
-twosup = 2.**sup
-factor = 2**(float((inf+sup))/30.)
-if(factor < 256.)factor=256.
+twoinf = 2.0_wp**(-inf)
+twosup = 2.0_wp**sup
+factor = 2.0_wp**(float((inf+sup))/30.0_wp)
+if (factor < 256.0_wp)factor=256.0_wp
 maxh1 = xmax - x0
 signh = 1
-if(x0-xmin <= maxh1)then
+if (x0-xmin <= maxh1)then
   maxh2 = x0 - xmin
 else
   maxh2 = maxh1
   maxh1 = x0 - xmin
   signh = -1
 end if
-relacc = 2.**(1-eta)
-maxh1 = (1.-relacc)*maxh1
-maxh2 = (1.-relacc)*maxh2
-s=128.*twoinf
-if(abs(x0) > 128.*twoinf*2.**eta) s = abs(x0)*2.**(-eta)
-if(maxh1 < s)then
+relacc = 2.0_wp**(1.0_wp-eta)
+maxh1 = (1.0_wp-relacc)*maxh1
+maxh2 = (1.0_wp-relacc)*maxh2
+s=128.0_wp*twoinf
+if (abs(x0) > 128.0_wp*twoinf*2.0_wp**eta) s = abs(x0)*2.0_wp**(-eta)
+if (maxh1 < s)then
 !         interval too small
   ifail =3
   return
 end if
-if(acc < 0.) then
-  if(-acc > relacc)relacc = -acc
-  acc = 0.
+if (acc < 0.0_wp) then
+  if (-acc > relacc)relacc = -acc
+  acc = 0.0_wp
 end if
 
 !     determine the smallest spacing at which the calculated
@@ -148,56 +153,56 @@ end if
 
 f0 = f(x0)
 twof0 = f0 + f0
-if(abs(x0) > twoinf*2.**eta) then
-  h = abs(x0)*2.**(-eta)
-  z = 2.
+if (abs(x0) > twoinf*2.0_wp**eta) then
+  h = abs(x0)*2.0_wp**(-eta)
+  z = 2.0_wp
 else
   h = twoinf
-  z = 64.
+  z = 64.0_wp
 end if
 df1 = f(x0+signh*h) - f0
-80 if(df1 /= 0. .or. z*h > maxh1) go to 100
+80 if (df1 /= 0.0_wp .or. z*h > maxh1) go to 100
 h = z*h
 df1 = f(x0+signh*h) - f0
-if(z /= 2.) then
-  if(df1 /= 0.) then
+if (z /= 2.0_wp) then
+  if (df1 /= 0.0_wp) then
     h = h/z
-    z = 2.
-    df1 = 0.
+    z = 2.0_wp
+    df1 = 0.0_wp
   else
-    if(z*h > maxh1) z = 2.
+    if (z*h > maxh1) z = 2.0_wp
   end if
 end if
 go to 80
 100 continue
 
-if(df1 == 0.) then
+if (df1 == 0.0_wp) then
 !         constant function
-  deriv = 0.
-  error = 0.
+  deriv = 0.0_wp
+  error = 0.0_wp
   ifail = 0
   return
 end if
-if(h > maxh1/128.) then
+if (h > maxh1/128.0_wp) then
 !         minimum h too large
   ifail = 3
   return
 end if
 
-h = 8.*h
+h = 8.0_wp*h
 h1 = signh*h
 h0 = h1
 h2 = -h1
-minh = 2.**(-min(inf,sup)/iord)
-if(minh < h) minh = h
-if(iord == 1) s = 8.
-if(iord == 2) s = 9.*sqrt(3.)
-if(iord == 3) s = 27.
-if(minh > maxh1/s) then
+minh = 2.0_wp**(-min(inf,sup)/iord)
+if (minh < h) minh = h
+if (iord == 1) s = 8.0_wp
+if (iord == 2) s = 9.0_wp*sqrt(3.0_wp)
+if (iord == 3) s = 27.0_wp
+if (minh > maxh1/s) then
   ifail = 3
   return
 end if
-if(minh > maxh2/s .or. maxh2 < 128.*twoinf) then
+if (minh > maxh2/s .or. maxh2 < 128.0_wp*twoinf) then
   method = 1
 else
   method = 2
@@ -206,122 +211,122 @@ end if
 !     method 1 uses 1-sided formulae, and method 2 symmetric.
 !         now estimate accuracy of calculated function values.
 
-if(method /= 2 .or. iord == 2) then
-  if(x0 /= 0.) then
-    dummy1 = 0.
+if (method /= 2 .or. iord == 2) then
+  if (x0 /= 0.0_wp) then
+    dummy1 = 0.0_wp
     dummy2 = -h1
     call faccur(dummy1,dummy2,acc0,x0,f,twoinf,f0,f1)
   else
-    acc0 = 0.
+    acc0 = 0.0_wp
   end if
 end if
 
-if(abs(h1) > twosup/128.) then
+if (abs(h1) > twosup/128.0_wp) then
   hacc1 = twosup
 else
-  hacc1 = 128.*h1
+  hacc1 = 128.0_wp*h1
 end if
 
-if(abs(hacc1)/4. < minh) then
-  hacc1 = 4.*signh*minh
-else if(abs(hacc1) > maxh1) then
+if (abs(hacc1)/4.0_wp < minh) then
+  hacc1 = 4.0_wp*signh*minh
+else if (abs(hacc1) > maxh1) then
   hacc1 = signh*maxh1
 end if
 f1 = f(x0+hacc1)
 call faccur(hacc1,h1,acc1,x0,f,twoinf,f0,f1)
-if(method == 2) then
+if (method == 2) then
   hacc2 = -hacc1
-  if(abs(hacc2) > maxh2) hacc2 = -signh * maxh2
+  if (abs(hacc2) > maxh2) hacc2 = -signh * maxh2
   f1 = f(x0 + hacc2)
   call faccur(hacc2,h2,acc2,x0,f,twoinf,f0,f1)
 end if
 nmax = 8
-if(eta > 36) nmax = 10
+if (eta > 36) nmax = 10
 n = -1
 fcount = 0
-deriv = 0.
+deriv = 0.0_wp
 error = twosup
 init = 3
 contin = .true.
 
 130 n = n+1
-if(.not. contin) go to 800
+if (.not. contin) go to 800
 
-if(init == 3) then
+if (init == 3) then
 !         calculate coefficients for differentiation formulae
 !             and neville extrapolation algorithm
-  if(iord == 1) then
-    beta=2.
-  else if(method == 2)then
-    beta = sqrt(2.)
+  if (iord == 1) then
+    beta=2.0_wp
+  else if (method == 2)then
+    beta = sqrt(2.0_wp)
   else
-    beta = sqrt(3.)
+    beta = sqrt(3.0_wp)
   end if
-  beta4 = beta**4.
+  beta4 = beta**4
   z = beta
-  if(method == 2) z = z**2
-  zpower = 1.
+  if (method == 2) z = z**2
+  zpower = 1.0_wp
   do  k = 1,nmax
     zpower = z*zpower
     denom(k) = zpower-1
   end do
-  if(method == 2 .and. iord == 1) then
-    e(1) = 5.
-    e(2) = 6.3
+  if (method == 2 .and. iord == 1) then
+    e(1) = 5.0_wp
+    e(2) = 6.3_wp
     do  i = 3,nmax
-      e(i) = 6.81
+      e(i) = 6.81_wp
     end do
-  else if((method /= 2.and.iord == 1) .or. (method == 2.and.  &
+  else if ((method /= 2.and.iord == 1) .or. (method == 2.and.  &
         iord == 2)) then
-    e(1) = 10.
-    e(2) = 16.
-    e(3) = 20.36
-    e(4) = 23.
-    e(5) = 24.46
+    e(1) = 10.0_wp
+    e(2) = 16.0_wp
+    e(3) = 20.36_wp
+    e(4) = 23.0_wp
+    e(5) = 24.46_wp
     do  i = 6,nmax
-      e(i) = 26.
+      e(i) = 26.0_wp
     end do
-    if(method == 2.and.iord == 2) then
+    if (method == 2.and.iord == 2) then
       do  i = 1,nmax
-        e(i)=2*e(i)
+        e(i)=2.0_wp*e(i)
       end do
     end if
-  else if(method /= 2.and.iord == 2) then
-    e(1) = 17.78
-    e(2) = 30.06
-    e(3) = 39.66
-    e(4) = 46.16
-    e(5) = 50.26
+  else if (method /= 2.and.iord == 2) then
+    e(1) = 17.78_wp
+    e(2) = 30.06_wp
+    e(3) = 39.66_wp
+    e(4) = 46.16_wp
+    e(5) = 50.26_wp
     do  i = 6,nmax
-      e(i) = 55.
+      e(i) = 55.0_wp
     end do
-  else if(method == 2.and.iord == 3) then
-    e(1) = 25.97
-    e(2) = 41.22
-    e(3) = 50.95
-    e(4) = 56.4
-    e(5) = 59.3
+  else if (method == 2.and.iord == 3) then
+    e(1) = 25.97_wp
+    e(2) = 41.22_wp
+    e(3) = 50.95_wp
+    e(4) = 56.4_wp
+    e(5) = 59.3_wp
     do  i = 6,nmax
-      e(i) = 62.
+      e(i) = 62.0_wp
     end do
   else
-    e(1) = 24.5
-    e(2) = 40.4
-    e(3) = 52.78
-    e(4) = 61.2
-    e(5) = 66.55
+    e(1) = 24.5_wp
+    e(2) = 40.4_wp
+    e(3) = 52.78_wp
+    e(4) = 61.2_wp
+    e(5) = 66.55_wp
     do  i = 6,nmax
-      e(i) = 73.
+      e(i) = 73.0_wp
     end do
-    c0f0 = -twof0/(3.*beta)
-    c1 = 3./(3.*beta-1.)
-    c2 = -1./(3.*(beta-1.))
-    c3 = 1./(3.*beta*(5.-2.*beta))
+    c0f0 = -twof0/(3.0_wp*beta)
+    c1 = 3.0_wp/(3.0_wp*beta-1.0_wp)
+    c2 = -1.0_wp/(3.0_wp*(beta-1.0_wp))
+    c3 = 1.0_wp/(3.0_wp*beta*(5.0_wp-2.0_wp*beta))
   end if
 end if
 
 
-if(init >= 2) then
+if (init >= 2) then
 !         initialization of steplengths, accuracy and other
 !             parameters
   
@@ -329,28 +334,28 @@ if(init >= 2) then
   h = heval
   baseh = heval
   maxh = maxh2
-  if(method == 1)maxh = maxh1
+  if (method == 1)maxh = maxh1
   do  k = 1,nmax
     minerr(k) = twosup
     ignore(k) = .false.
   end do
-  if(method == 1) newacc = acc1
-  if(method == -1) newacc = acc2
-  if(method == 2) newacc = (acc1+acc2)/2.
-  if(newacc < acc) newacc = acc
-  if((method /= 2 .or. iord == 2) .and. newacc < acc0) newacc = acc0
-  if(method /= -1) then
+  if (method == 1) newacc = acc1
+  if (method == -1) newacc = acc2
+  if (method == 2) newacc = (acc1+acc2)/2.0_wp
+  if (newacc < acc) newacc = acc
+  if ((method /= 2 .or. iord == 2) .and. newacc < acc0) newacc = acc0
+  if (method /= -1) then
     facc1 = acc1
     nhacc1 = hacc1
     newh1 = h1
   end if
-  if(method /= 1) then
+  if (method /= 1) then
     facc2 = acc2
     nhacc2 = hacc2
     newh2 = h2
   else
-    facc2 = 0.
-    nhacc2 = 0.
+    facc2 = 0.0_wp
+    nhacc2 = 0.0_wp
   end if
   init = 1
   j = 0
@@ -359,9 +364,9 @@ end if
 
 !     calculate new or initial function values
 
-if(init == 1 .and. (n == 0 .or. iord == 1) .and.  &
+if (init == 1 .and. (n == 0 .or. iord == 1) .and.  &
       .not.(method == 2 .and. fcount >= 45)) then
-  if(method == 2) then
+  if (method == 2) then
     fcount = fcount + 1
     f1 = f(x0+heval)
     storef(fcount) = f1
@@ -369,7 +374,7 @@ if(init == 1 .and. (n == 0 .or. iord == 1) .and.  &
     storef(-fcount) = f2
   else
     j = j+1
-    if(j <= fcount) then
+    if (j <= fcount) then
       f1 = storef(j*method)
     else
       f1 = f(x0+heval)
@@ -377,22 +382,22 @@ if(init == 1 .and. (n == 0 .or. iord == 1) .and.  &
   end if
 else
   f1 = f(x0+heval)
-  if(method == 2) f2 = f(x0-heval)
+  if (method == 2) f2 = f(x0-heval)
 end if
-if(n == 0) then
-  if(method == 2 .and. iord == 3) then
+if (n == 0) then
+  if (method == 2 .and. iord == 3) then
     pdelta = f1-f2
-    pmaxf = (abs(f1)+abs(f2))/2.
+    pmaxf = (abs(f1)+abs(f2))/2.0_wp
     heval = beta*heval
     f1 = f(x0+heval)
     f2 = f(x0-heval)
     deltaf = f1-f2
-    maxfun = (abs(f1)+abs(f2))/2.
+    maxfun = (abs(f1)+abs(f2))/2.0_wp
     heval = beta*heval
     f1 = f(x0+heval)
     f2 = f(x0-heval)
-  else if(method /= 2 .and. iord >= 2) then
-    if(iord == 2) then
+  else if (method /= 2 .and. iord >= 2) then
+    if (iord == 2) then
       f3 = f1
     else
       f4 = f1
@@ -408,67 +413,67 @@ end if
 
 !     evaluate a new approximation dnew to the derivative
 
-if(n > nmax) then
+if (n > nmax) then
   n = nmax
   do  i = 1,n
     maxf(i-1) = maxf(i)
   end do
 end if
-if(method == 2) then
-  maxf(n) = (abs(f1)+abs(f2))/2.
-  if(iord == 1) then
-    dnew = (f1-f2)/2.
-  else if(iord == 2) then
+if (method == 2) then
+  maxf(n) = (abs(f1)+abs(f2))/2.0_wp
+  if (iord == 1) then
+    dnew = (f1-f2)/2.0_wp
+  else if (iord == 2) then
     dnew = f1+f2-twof0
   else
     dnew = -pdelta
     pdelta = deltaf
     deltaf = f1-f2
-    dnew = dnew + .5*deltaf
-    if(maxf(n) < pmaxf) maxf(n) = pmaxf
+    dnew = dnew + 0.5_wp*deltaf
+    if (maxf(n) < pmaxf) maxf(n) = pmaxf
     pmaxf = maxfun
-    maxfun = (abs(f1)+abs(f2))/2.
+    maxfun = (abs(f1)+abs(f2))/2.0_wp
   end if
 else
   maxf(n) = abs(f1)
-  if(iord == 1) then
+  if (iord == 1) then
     dnew = f1-f0
-  else if(iord == 2) then
-    dnew = (twof0-3*f3+f1)/3.
-    if(maxf(n) < abs(f3)) maxf(n) = abs(f3)
+  else if (iord == 2) then
+    dnew = (twof0-3.0_wp*f3+f1)/3.0_wp
+    if (maxf(n) < abs(f3)) maxf(n) = abs(f3)
     f3 = f2
     f2 = f1
   else
     dnew = c3*f1+c2*f2+c1*f4+c0f0
-    if(maxf(n) < abs(f2)) maxf(n) = abs(f2)
-    if(maxf(n) < abs(f4)) maxf(n) = abs(f4)
+    if (maxf(n) < abs(f2)) maxf(n) = abs(f2)
+    if (maxf(n) < abs(f4)) maxf(n) = abs(f4)
     f4 = f3
     f3 = f2
     f2 = f1
   end if
 end if
-if(abs(h) > 1) then
+if (abs(h) > 1) then
   dnew = dnew/h**iord
 else
-  if(128.*abs(dnew) > twosup*abs(h)**iord) then
-    dnew = twosup/128.
+  if (128.0_wp*abs(dnew) > twosup*abs(h)**iord) then
+    dnew = twosup/128.0_wp
   else
     dnew = dnew/h**iord
   end if
 end if
 
-if(init == 0) then
+if (init == 0) then
 !         update estimated accuracy of function values
   newacc = acc
-  if((method /= 2 .or. iord == 2) .and. newacc < acc0) newacc = acc0
-  if(method /= -1 .and. abs(nhacc1) <= 1.125*abs(heval)/beta4) then
+  if ((method /= 2 .or. iord == 2) .and. newacc < acc0) newacc = acc0
+  if (method /= -1 .and. abs(nhacc1) <= 1.125_wp*abs(heval)/beta4) then
     nhacc1 = heval
     pacc1 = facc1
     call faccur(nhacc1,newh1,facc1,x0,f,twoinf,f0,f1)
-    if(facc1 < pacc1) facc1=(3*facc1+pacc1)/4.
+    if (facc1 < pacc1) facc1=(3*facc1+pacc1)/4.0_wp
   end if
-  if(method /= 1 .and. abs(nhacc2) <= 1.125*abs(heval)/beta4) then
-    if(method == 2) then
+  if (method /= 1 .and. abs(nhacc2) <= 1.125_wp*abs(heval)/beta4) then
+    if (method == 2) then
       f1 = f2
       nhacc2 = -heval
     else
@@ -476,11 +481,11 @@ if(init == 0) then
     end if
     pacc2 = facc2
     call faccur(nhacc2,newh2,facc2,x0,f,twoinf,f0,f1)
-    if(facc2 < pacc2) facc2 = (3*facc2+pacc2)/4.
+    if (facc2 < pacc2) facc2 = (3.0_wp*facc2+pacc2)/4.0_wp
   end if
-  if(method == 1 .and. newacc < facc1) newacc = facc1
-  if(method == -1 .and. newacc < facc2) newacc = facc2
-  if(method == 2 .and. newacc < (facc1+facc2)/2.) newacc = (facc1+facc2)/2.
+  if (method == 1 .and. newacc < facc1) newacc = facc1
+  if (method == -1 .and. newacc < facc2) newacc = facc2
+  if (method == 2 .and. newacc < (facc1+facc2)/2.0_wp) newacc = (facc1+facc2)/2.0_wp
 end if
 
 !     evaluate successive elements of the current row in the neville
@@ -490,58 +495,58 @@ end if
 contin = n < nmax
 hprev = abs(h)
 fmax = maxf(n)
-if((method /= 2 .or. iord == 2) .and. fmax < abs(f0)) fmax = abs(f0)
+if ((method /= 2 .or. iord == 2) .and. fmax < abs(f0)) fmax = abs(f0)
 
 do  k = 1,n
   dprev = d(k)
   d(k) = dnew
   dnew = dprev+(dprev-dnew)/denom(k)
   te = abs(dnew-d(k))
-  if(fmax < maxf(n-k)) fmax = maxf(n-k)
+  if (fmax < maxf(n-k)) fmax = maxf(n-k)
   hprev = hprev/beta
-  if(newacc >= relacc*fmax) then
+  if (newacc >= relacc*fmax) then
     re = newacc*e(k)
   else
     re = relacc*fmax*e(k)
   end if
-  if(re /= 0.) then
-    if(hprev > 1) then
+  if (re /= 0.0_wp) then
+    if (hprev > 1) then
       re = re/hprev**iord
-    else if(2*re > twosup*hprev**iord) then
-      re = twosup/2.
+    else if (2.0_wp*re > twosup*hprev**iord) then
+      re = twosup/2.0_wp
     else
       re = re/hprev**iord
     end if
   end if
   newerr = te+re
-  if(te > re) newerr = 1.25*newerr
-  if(.not. ignore(k)) then
-    if((init == 0 .or. (k == 2 .and. .not.ignore(1)))  &
+  if (te > re) newerr = 1.25_wp*newerr
+  if (.not. ignore(k)) then
+    if ((init == 0 .or. (k == 2 .and. .not.ignore(1)))  &
           .and. newerr < error) then
       deriv = d(k)
       error = newerr
     end if
-    if(init == 1 .and. n == 1) then
+    if (init == 1 .and. n == 1) then
       tderiv = d(1)
       temerr = newerr
     end if
-    if(minerr(k) < twosup/4) then
-      s = 4*minerr(k)
+    if (minerr(k) < twosup/4.0_wp) then
+      s = 4.0_wp*minerr(k)
     else
       s = twosup
     end if
-    if(te > re .or. newerr > s) then
+    if (te > re .or. newerr > s) then
       ignore(k) = .true.
     else
       contin = .true.
     end if
-    if(newerr < minerr(k)) minerr(k) = newerr
-    if(init == 1 .and. n == 2 .and. k == 1 .and. .not.ignore(1)) then
-      if(newerr < temerr) then
+    if (newerr < minerr(k)) minerr(k) = newerr
+    if (init == 1 .and. n == 2 .and. k == 1 .and. .not.ignore(1)) then
+      if (newerr < temerr) then
         tderiv = d(1)
         temerr = newerr
       end if
-      if(temerr < error) then
+      if (temerr < error) then
         deriv = tderiv
         error = temerr
       end if
@@ -549,16 +554,16 @@ do  k = 1,n
   end if
 end do
 
-if(n < nmax) d(n+1) = dnew
-if(eps < 0.) then
+if (n < nmax) d(n+1) = dnew
+if (eps < 0.0_wp) then
   s = abs(eps*deriv)
 else
   s = eps
 end if
-if(error <= s) then
+if (error <= s) then
   contin = .false.
-else if(init == 1 .and. (n == 2 .or. ignore(1))) then
-  if((ignore(1) .or. ignore(2)) .and. saved) then
+else if (init == 1 .and. (n == 2 .or. ignore(1))) then
+  if ((ignore(1) .or. ignore(2)) .and. saved) then
     saved = .false.
     n = 2
     h = beta * save(0)
@@ -571,20 +576,20 @@ else if(init == 1 .and. (n == 2 .or. ignore(1))) then
     d(3) = save(7)
     minerr(1) = save(8)
     minerr(2) = save(9)
-    if(method == 2 .and. iord == 3) then
+    if (method == 2 .and. iord == 3) then
       pdelta = save(10)
       deltaf = save(11)
       pmaxf = save(12)
       maxfun = save(13)
-    else if(method /= 2 .and. iord >= 2) then
+    else if (method /= 2 .and. iord >= 2) then
       f2 = save(10)
       f3 = save(11)
-      if(iord == 3) f4 = save(12)
+      if (iord == 3) f4 = save(12)
     end if
     init = 0
     ignore(1) = .false.
     ignore(2) = .false.
-  else if(.not. (ignore(1) .or. ignore(2)) .and. n == 2  &
+  else if (.not. (ignore(1) .or. ignore(2)) .and. n == 2  &
         .and. beta4*factor*abs(heval) <= maxh) then
 !             save all current values in case of return to
 !                 current point
@@ -599,15 +604,15 @@ else if(init == 1 .and. (n == 2 .or. ignore(1))) then
     save(7) = d(3)
     save(8) = minerr(1)
     save(9) = minerr (2)
-    if(method == 2 .and. iord == 3) then
+    if (method == 2 .and. iord == 3) then
       save(10) = pdelta
       save(11) = deltaf
       save(12) = pmaxf
       save(13) = maxfun
-    else if(method /= 2 .and. iord >= 2) then
+    else if (method /= 2 .and. iord >= 2) then
       save(10) = f2
       save(11) = f3
-      if(iord == 3) save(12) = f4
+      if (iord == 3) save(12) = f4
     end if
     h = factor*baseh
     heval = h
@@ -618,21 +623,21 @@ else if(init == 1 .and. (n == 2 .or. ignore(1))) then
     h = beta*h
     heval = beta*heval
   end if
-else if(contin .and. beta*abs(heval) <= maxh) then
+else if (contin .and. beta*abs(heval) <= maxh) then
   h = beta*h
   heval = beta*heval
-else if(method /= 1) then
+else if (method /= 1) then
   contin = .true.
-  if(method == 2) then
+  if (method == 2) then
     init = 3
     method = -1
-    if(iord /= 2) then
-      if(x0 /= 0.) then
-        dummy1 = 0.
+    if (iord /= 2) then
+      if (x0 /= 0.0_wp) then
+        dummy1 = 0.0_wp
         dummy2 = -h0       
         call faccur(dummy1,dummy2,acc0,x0,f,twoinf,f0,f1)
       else
-        acc0 = 0.
+        acc0 = 0.0_wp
       end if
     end if
   else
@@ -645,18 +650,21 @@ else
   contin = .false.
 end if
 go to 130
-800 if(eps < 0.) then
+800 if (eps < 0.0_wp) then
   s = abs(eps*deriv)
 else
   s = eps
 end if
 ifail = 0
-if(eps /= 0. .and. error > s) ifail = 1
-return
-end subroutine diff
-!deck faccur
+if (eps /= 0.0_wp .and. error > s) ifail = 1
 
-subroutine faccur(h0,h1,facc,x0,f,twoinf,f0,f1)
+!*****************************************************************************************
+	end subroutine diff
+!*****************************************************************************************
+
+!*****************************************************************************************
+	subroutine faccur(h0,h1,facc,x0,f,twoinf,f0,f1)
+!*****************************************************************************************
 
 real(wp), intent(in out)                     :: h0
 real(wp), intent(out)                        :: h1
@@ -669,40 +677,39 @@ real(wp) :: a0,a1,f00,f2,deltaf,t0,t1, df(5)
 integer :: j
 procedure(func) :: f
 
-t0 = 0.
-t1 = 0.
-if(h0 /= 0.) then
-  if(x0+h0 /= 0.) then
+t0 = 0.0_wp
+t1 = 0.0_wp
+if (h0 /= 0.0_wp) then
+  if (x0+h0 /= 0.0_wp) then
     f00 = f1
   else
-    h0 = 0.875*h0
+    h0 = 0.875_wp*h0
     f00 = f(x0+h0)
   end if
-  if(abs(h1) >= 32.*twoinf) h1 = h1/8.
-  if(16.*abs(h1) > abs(h0)) h1 = sign(h1,1.)*abs(h0)/16.
-  if(f(x0+h0-h1) == f00) then
-    if(256.*abs(h1) <= abs(h0)) then
-      h1 = 2.*h1
-      10             if(f(x0+h0-h1) /= f00 .or. 256.*abs(h1) > abs(h0))  &
-          go to 20
-      h1 = 2.*h1
+  if (abs(h1) >= 32.0_wp*twoinf) h1 = h1/8.0_wp
+  if (16.0_wp*abs(h1) > abs(h0)) h1 = sign(h1,1.0_wp)*abs(h0)/16.0_wp
+  if (f(x0+h0-h1) == f00) then
+    if (256.0_wp*abs(h1) <= abs(h0)) then
+      h1 = 2.0_wp*h1
+      10 if (f(x0+h0-h1) /= f00 .or. 256.0_wp*abs(h1) > abs(h0)) go to 20
+      h1 = 2.0_wp*h1
       go to 10
-      20             h1 = 8.*h1
+      20 h1 = 8.0_wp*h1
       
     else
-      h1 = sign(h1,1.)*abs(h0)/16.
+      h1 = sign(h1,1.0_wp)*abs(h0)/16.0_wp
     end if
   else
-    if(256.*twoinf <= abs(h0)) then
-      30             if(f(x0+h0-h1/2.) == f00 .or. abs(h1) < 4.*twoinf)  &
+    if (256.0_wp*twoinf <= abs(h0)) then
+      30 if (f(x0+h0-h1/2.0_wp) == f00 .or. abs(h1) < 4.0_wp*twoinf)  &
           go to 40
-      h1 = h1/2.
+      h1 = h1/2.0_wp
       go to 30
-      40             continue
-      h1 = 8.*h1
-      if(16.*abs(h1) > abs(h0)) h1 = sign(h1,1.) *abs(h0)/16.
+      40 continue
+      h1 = 8.0_wp*h1
+      if (16.0_wp*abs(h1) > abs(h0)) h1 = sign(h1,1.0_wp) *abs(h0)/16.0_wp
     else
-      h1 = sign(h1,1.)*abs(h0)/16.
+      h1 = sign(h1,1.0_wp)*abs(h0)/16.0_wp
     end if
   end if
 else
@@ -715,18 +722,22 @@ do  j = 1,5
   t0 = t0+df(j)
   t1 = t1+float(2*j-1)*df(j)
 end do
-a0 = (33.*t0-5.*t1)/73.
-a1 = (-5.*t0+1.2*t1)/73.
+a0 = (33.0_wp*t0-5.0_wp*t1)/73.0_wp
+a1 = (-5.0_wp*t0+1.2_wp*t1)/73.0_wp
 facc = abs(a0)
 do  j = 1,5
   deltaf = abs(df(j)-(a0+float(2*j-1)*a1))
-  if(facc < deltaf) facc = deltaf
+  if (facc < deltaf) facc = deltaf
 end do
-facc = 2.*facc
-return
-end subroutine faccur
+facc = 2.0_wp*facc
 
+!*****************************************************************************************
+	end subroutine faccur
+!*****************************************************************************************
+
+!*****************************************************************************************
 	integer function i1mach (i)
+!*****************************************************************************************
 	implicit none
 	integer :: i
 	real(wp),parameter :: x = 1.0_wp
@@ -740,10 +751,13 @@ end subroutine faccur
 		i1mach = maxexponent(x)	!emax, the largest exponent e.
 	end select
 	
+!*****************************************************************************************
 	end function i1mach
+!*****************************************************************************************
 
-
+!*****************************************************************************************
 	subroutine test_case()
+!*****************************************************************************************
 	implicit none
 	
 	integer,parameter  :: iord = 1
@@ -781,10 +795,13 @@ end subroutine faccur
 		
 		end function test_function
 	
+!*****************************************************************************************
 	end subroutine test_case
+!*****************************************************************************************
 
+!*****************************************************************************************
 	end module diff_module
-
+!*****************************************************************************************
 	
 	program test
 	
