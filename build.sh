@@ -1,0 +1,30 @@
+#!/bin/sh
+
+#
+#  Build the diff example
+#
+#  Jacob Williams : 2/18/2014
+#
+
+SRCDIR='./'
+BUILDDIR='./'
+
+FCOMPILER='gfortran'
+FCOMPILERFLAGS='-O2'
+
+FEXT='.f90'
+OBJEXT='.o'
+LIBEXT='.a'
+
+EXEOUT='diff'
+
+MODCODE='diff'
+EXAMPLECODE='test_cases'
+
+
+#build library:
+$FCOMPILER $FCOMPILERFLAGS -c $SRCDIR$MODCODE$FEXT
+$FCOMPILER $FCOMPILERFLAGS -c $SRCDIR$EXAMPLECODE$FEXT
+
+#build example:
+$FCOMPILER $FCOMPILERFLAGS -o $BUILDDIR$EXEOUT $SRCDIR$MODCODE$FEXT $SRCDIR$EXAMPLECODE$FEXT
