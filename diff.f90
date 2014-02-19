@@ -14,25 +14,32 @@
 	
 	private
 	
+	!class to define the function:
+	type,public :: diff_func
+		procedure(func),pointer,private :: f => null()
+		contains
+		procedure,private :: faccur
+		procedure :: compute_derivative => diff
+	end type diff_func
+	
 	!interface of function:
 	abstract interface
-		function func(x) result(fx)
-			import :: wp
+		function func(me,x) result(fx)
+			import :: diff_func,wp
 			implicit none
+			class(diff_func),intent(inout) :: me
 			real(wp),intent(in) :: x
 			real(wp) :: fx
 		end function func
 	end interface
 	
-	!public routines:
-	public :: diff
 	public :: test_case
 		
 	contains
 !*****************************************************************************************
 
 !*****************************************************************************************
-	subroutine diff(iord,x0,xmin,xmax,f,eps,accr,deriv,error,ifail)
+	subroutine diff(me,iord,x0,xmin,xmax,eps,accr,deriv,error,ifail)
 !*****************************************************************************************
 !
 !DESCRIPTION
@@ -97,7 +104,8 @@
 
 	implicit none
 	
-	integer, intent(in)   :: iord
+	class(diff_func),intent(inout) :: me	
+	integer,intent(in)    :: iord
 	real(wp), intent(in)  :: x0
 	real(wp), intent(in)  :: xmin
 	real(wp), intent(in)  :: xmax
@@ -106,7 +114,6 @@
 	real(wp), intent(out) :: deriv
 	real(wp), intent(out) :: error
 	integer, intent(out)  :: ifail
-	procedure(func)       :: f
 
 	real(wp) :: acc,beta,beta4,h,h0,h1,h2, &
 		newh1,newh2,heval,hprev,baseh,hacc1,hacc2,nhacc1, &
@@ -132,7 +139,8 @@
 	real(wp),parameter :: sqrt2 = sqrt(2.0_wp)
 	real(wp),parameter :: sqrt3 = sqrt(3.0_wp)
 
-	if (iord<1 .or. iord>3 .or. xmax<=xmin .or. x0>xmax .or. x0<xmin) then
+	if (iord<1 .or. iord>3 .or. xmax<=xmin .or. &
+		x0>xmax .or. x0<xmin .or. .not. associated(me%f)) then
 	
 	  ifail = 2
 	  
@@ -170,7 +178,7 @@
 		! determine the smallest spacing at which the calculated
 		! function values are unequal near x0.
 
-		f0 = f(x0)
+		f0 = me%f(x0)
 		twof0 = f0 + f0
 		if (abs(x0) > twoinf*2.0_wp**eta) then
 		  h = abs(x0)*2.0_wp**(-eta)
@@ -179,11 +187,11 @@
 		  h = twoinf
 		  z = 64.0_wp
 		end if
-		df1 = f(x0+signh*h) - f0
+		df1 = me%f(x0+signh*h) - f0
 		do
 			if (df1 /= 0.0_wp .or. z*h > maxh1) exit
 			h = z*h
-			df1 = f(x0+signh*h) - f0
+			df1 = me%f(x0+signh*h) - f0
 			if (z /= 2.0_wp) then
 			  if (df1 /= 0.0_wp) then
 				h = h/z
@@ -239,7 +247,7 @@
 		  if (x0 /= 0.0_wp) then
 			dummy1 = 0.0_wp
 			dummy2 = -h1
-			call faccur(dummy1,dummy2,acc0,x0,f,twoinf,f0,f1)
+			call me%faccur(dummy1,dummy2,acc0,x0,twoinf,f0,f1)
 		  else
 			acc0 = 0.0_wp
 		  end if
@@ -256,13 +264,13 @@
 		else if (abs(hacc1) > maxh1) then
 		  hacc1 = signh*maxh1
 		end if
-		f1 = f(x0+hacc1)
-		call faccur(hacc1,h1,acc1,x0,f,twoinf,f0,f1)
+		f1 = me%f(x0+hacc1)
+		call me%faccur(hacc1,h1,acc1,x0,twoinf,f0,f1)
 		if (method == 2) then
 		  hacc2 = -hacc1
 		  if (abs(hacc2) > maxh2) hacc2 = -signh * maxh2
-		  f1 = f(x0 + hacc2)
-		  call faccur(hacc2,h2,acc2,x0,f,twoinf,f0,f1)
+		  f1 = me%f(x0 + hacc2)
+		  call me%faccur(hacc2,h2,acc2,x0,twoinf,f0,f1)
 		end if
 		nmax = 8
 		if (eta > 36) nmax = 10
@@ -392,46 +400,46 @@
 				  .not.(method == 2 .and. fcount >= 45)) then
 			  if (method == 2) then
 				fcount = fcount + 1
-				f1 = f(x0+heval)
+				f1 = me%f(x0+heval)
 				storef(fcount) = f1
-				f2 = f(x0-heval)
+				f2 = me%f(x0-heval)
 				storef(-fcount) = f2
 			  else
 				j = j+1
 				if (j <= fcount) then
 				  f1 = storef(j*method)
 				else
-				  f1 = f(x0+heval)
+				  f1 = me%f(x0+heval)
 				end if
 			  end if
 			else
-			  f1 = f(x0+heval)
-			  if (method == 2) f2 = f(x0-heval)
+			  f1 = me%f(x0+heval)
+			  if (method == 2) f2 = me%f(x0-heval)
 			end if
 			if (n == 0) then
 			  if (method == 2 .and. iord == 3) then
 				pdelta = f1-f2
 				pmaxf = (abs(f1)+abs(f2))/2.0_wp
 				heval = beta*heval
-				f1 = f(x0+heval)
-				f2 = f(x0-heval)
+				f1 = me%f(x0+heval)
+				f2 = me%f(x0-heval)
 				deltaf = f1-f2
 				maxfun = (abs(f1)+abs(f2))/2.0_wp
 				heval = beta*heval
-				f1 = f(x0+heval)
-				f2 = f(x0-heval)
+				f1 = me%f(x0+heval)
+				f2 = me%f(x0-heval)
 			  else if (method /= 2 .and. iord >= 2) then
 				if (iord == 2) then
 				  f3 = f1
 				else
 				  f4 = f1
 				  heval = beta*heval
-				  f3 = f(x0+heval)
+				  f3 = me%f(x0+heval)
 				end if
 				heval = beta*heval
-				f2 = f(x0+heval)
+				f2 = me%f(x0+heval)
 				heval = beta*heval
-				f1 = f(x0+heval)
+				f1 = me%f(x0+heval)
 			  end if
 			end if
 
@@ -493,7 +501,7 @@
 			  if (method /= -1 .and. abs(nhacc1) <= 1.125_wp*abs(heval)/beta4) then
 				nhacc1 = heval
 				pacc1 = facc1
-				call faccur(nhacc1,newh1,facc1,x0,f,twoinf,f0,f1)
+				call me%faccur(nhacc1,newh1,facc1,x0,twoinf,f0,f1)
 				if (facc1 < pacc1) facc1=(3.0_wp*facc1+pacc1)/4.0_wp
 			  end if
 			  if (method /= 1 .and. abs(nhacc2) <= 1.125_wp*abs(heval)/beta4) then
@@ -504,7 +512,7 @@
 				  nhacc2 = heval
 				end if
 				pacc2 = facc2
-				call faccur(nhacc2,newh2,facc2,x0,f,twoinf,f0,f1)
+				call me%faccur(nhacc2,newh2,facc2,x0,twoinf,f0,f1)
 				if (facc2 < pacc2) facc2 = (3.0_wp*facc2+pacc2)/4.0_wp
 			  end if
 			  if (method == 1 .and. newacc < facc1) newacc = facc1
@@ -659,7 +667,7 @@
 				  if (x0 /= 0.0_wp) then
 					dummy1 = 0.0_wp
 					dummy2 = -h0       
-					call faccur(dummy1,dummy2,acc0,x0,f,twoinf,f0,f1)
+					call me%faccur(dummy1,dummy2,acc0,x0,twoinf,f0,f1)
 				  else
 					acc0 = 0.0_wp
 				  end if
@@ -691,11 +699,12 @@
 !*****************************************************************************************
 
 !*****************************************************************************************
-	subroutine faccur(h0,h1,facc,x0,f,twoinf,f0,f1)
+	subroutine faccur(me,h0,h1,facc,x0,twoinf,f0,f1)
 !*****************************************************************************************
 
 	implicit none
 	
+	class(diff_func),intent(inout) :: me
 	real(wp), intent(inout)  :: h0
 	real(wp), intent(inout)  :: h1
 	real(wp), intent(out)    :: facc
@@ -704,9 +713,8 @@
 	real(wp), intent(in)     :: f0
 	real(wp), intent(in)     :: f1
 	
-	real(wp) :: a0,a1,f00,f2,deltaf,t0,t1, df(5)
+	real(wp) :: a0,a1,f00,f2,deltaf,t0,t1,df(5)
 	integer :: j
-	procedure(func) :: f
 
 	t0 = 0.0_wp
 	t1 = 0.0_wp
@@ -715,15 +723,15 @@
 		f00 = f1
 	  else
 		h0 = 0.875_wp*h0
-		f00 = f(x0+h0)
+		f00 = me%f(x0+h0)
 	  end if
 	  if (abs(h1) >= 32.0_wp*twoinf) h1 = h1/8.0_wp
 	  if (16.0_wp*abs(h1) > abs(h0)) h1 = sign(h1,1.0_wp)*abs(h0)/16.0_wp
-	  if (f(x0+h0-h1) == f00) then
+	  if (me%f(x0+h0-h1) == f00) then
 		if (256.0_wp*abs(h1) <= abs(h0)) then
 		  h1 = 2.0_wp*h1
 		  do
-		      if (f(x0+h0-h1) /= f00 .or. 256.0_wp*abs(h1) > abs(h0)) exit
+		      if (me%f(x0+h0-h1) /= f00 .or. 256.0_wp*abs(h1) > abs(h0)) exit
 			  h1 = 2.0_wp*h1
 		  end do
 	      h1 = 8.0_wp*h1
@@ -733,7 +741,7 @@
 	  else
 		if (256.0_wp*twoinf <= abs(h0)) then
 		  do
-		  	if (f(x0+h0-h1/2.0_wp) == f00 .or. abs(h1) < 4.0_wp*twoinf) exit
+		  	if (me%f(x0+h0-h1/2.0_wp) == f00 .or. abs(h1) < 4.0_wp*twoinf) exit
 		  	h1 = h1/2.0_wp
 		  end do
 		  h1 = 8.0_wp*h1
@@ -747,7 +755,7 @@
 	end if
 
 	do j = 1,5
-	  f2 = f(x0+h0-real(2*j-1,wp)*h1)
+	  f2 = me%f(x0+h0-real(2*j-1,wp)*h1)
 	  df(j) = f2 - f00
 	  t0 = t0+df(j)
 	  t1 = t1+real(2*j-1,wp)*df(j)
@@ -779,28 +787,37 @@
 	real(wp),parameter :: acc   = 0.0_wp
 	
 	real(wp) :: deriv, error
-	integer  :: ifail, ifunc
+	integer  :: ifail
 	
-	ifunc = 0
-	call diff(iord,x0,xmin,xmax,sin_func,eps,acc,deriv,error,ifail)
+	type,extends(diff_func) :: my_func
+		integer :: ifunc = 0
+	end type my_func
+	type(my_func) :: d
+	
+	d%ifunc = 0
+	d%f => sin_func
+	call d%compute_derivative(iord,x0,xmin,xmax,eps,acc,deriv,error,ifail)
 	call write_results(cos(x0))
-	
-	ifunc = 0
-	call diff(iord,x0,xmin,xmax,test_func_1,eps,acc,deriv,error,ifail)
+
+	d%ifunc = 0
+	d%f => test_func_1
+	call d%compute_derivative(iord,x0,xmin,xmax,eps,acc,deriv,error,ifail)
 	call write_results(cos(x0) - sin(x0) + 2.0_wp*x0)
-	
-	ifunc = 0
-	call diff(iord,x0,xmin,xmax,test_func_2,eps,acc,deriv,error,ifail)
+
+	d%ifunc = 0
+	d%f => test_func_2
+	call d%compute_derivative(iord,x0,xmin,xmax,eps,acc,deriv,error,ifail)
 	call write_results(6.0_wp*x0**5 + 5.0_wp*x0**4 + 4.0_wp*x0**3 + 2.0_wp*x0 + 1.0_wp)
 	
 	contains
+!*****************************************************************************************
 	
 	!***********************************************************
 		subroutine write_results(truth)
 	!***********************************************************
-	
+		
 		implicit none
-	
+		
 		real(wp),intent(in) :: truth
 		
 		write(*,'(A)') ''
@@ -809,7 +826,7 @@
 		write(*,'(A,E25.16)') 'estimated error   :', error
 		write(*,'(A,E25.16)') 'actual error      :', truth - deriv
 		write(*,'(A,I5)')     'ifail             :', ifail
-		write(*,'(A,I5)')     'func evaluations  :', ifunc
+		write(*,'(A,I5)')     'func evaluations  :', d%ifunc
 		write(*,'(A)') ''
 		
 	!***********************************************************
@@ -817,15 +834,20 @@
 	!***********************************************************
 		
 	!***********************************************************
-		function sin_func(x) result(fx)
+		function sin_func(me,x) result(fx)
 	!***********************************************************
 	
 		implicit none
 	
+		class(diff_func),intent(inout) :: me
 		real(wp),intent(in) :: x
 		real(wp) :: fx
 		
-		ifunc = ifunc + 1
+		select type (me)
+		type is (my_func)
+			me%ifunc = me%ifunc + 1
+		end select
+		
 		fx = sin(x)
 				
 	!***********************************************************
@@ -833,15 +855,20 @@
 	!***********************************************************
 		
 	!***********************************************************
-		function test_func_1(x) result(fx)
+		function test_func_1(me,x) result(fx)
 	!***********************************************************
 	
 		implicit none
 	
+		class(diff_func),intent(inout) :: me
 		real(wp),intent(in) :: x
 		real(wp) :: fx
 		
-		ifunc = ifunc + 1
+		select type (me)
+		type is (my_func)
+			me%ifunc = me%ifunc + 1
+		end select
+
 		fx = sin(x) + cos(x) + x**2
 				
 	!***********************************************************
@@ -849,15 +876,20 @@
 	!***********************************************************
 
 	!***********************************************************
-		function test_func_2(x) result(fx)
+		function test_func_2(me,x) result(fx)
 	!***********************************************************
 	
 		implicit none
 	
+		class(diff_func),intent(inout) :: me
 		real(wp),intent(in) :: x
 		real(wp) :: fx
 		
-		ifunc = ifunc + 1
+		select type (me)
+		type is (my_func)
+			me%ifunc = me%ifunc + 1
+		end select
+		
 		fx = x**6 + x**5 + x**4 + x**2 + x
 				
 	!***********************************************************
