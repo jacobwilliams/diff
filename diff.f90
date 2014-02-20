@@ -92,7 +92,7 @@
 !
 !AUTHORS
 !
-!	David Kahaner, NBS (Gaithersburg)
+!	David Kahaner, NBS (Gaithersburg) : 11/02/89 :
 !		Original code: ftp://math.nist.gov/pub/repository/diff/src/DIFF
 !	Jacob Williams : 2/17/2013 : 
 !		Converted to modern Fortran.
@@ -126,7 +126,7 @@
 
 	! eta is the minimum number of significant binary digits (apart from the
 	! sign digit) used to represent the mantissa of real(wp) numbers. it should
-	! be devreased by one if the computer truncates rather than rounds.
+	! be decreased by one if the computer truncates rather than rounds.
 	! inf, sup are the largest possible positive integers subject to
 	! 2**(-inf), -2**(-inf), 2**sup, and -2**sup all being representable real(wp)
 	! numbers.
