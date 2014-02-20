@@ -14,13 +14,11 @@ FCOMPILERFLAGS='-O2'
 
 FEXT='.f90'
 OBJEXT='.o'
-LIBEXT='.a'
 
 EXEOUT='diff'
 
-MODCODE='diff'
+MODCODE='diff_module'
 EXAMPLECODE='test_cases'
-
 
 #build library:
 $FCOMPILER $FCOMPILERFLAGS -c $SRCDIR$MODCODE$FEXT
