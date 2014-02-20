@@ -40,7 +40,7 @@
 	subroutine diff(me,iord,x0,xmin,xmax,eps,accr,deriv,error,ifail)
 !*****************************************************************************************
 !
-!DESCRIPTION
+!  DESCRIPTION
 !
 !	numerical differentiation of user defined function
 !
@@ -54,7 +54,7 @@
 !   set to zero then the result having the minimum achievable estimated error
 !   is returned instead.
 !
-!INPUTS
+!  INPUTS
 !
 ! iord = 1, 2 or 3 specifies that the first, second or third order
 !   derivative,respectively, is required.
@@ -75,7 +75,7 @@
 !   should be as small as possible.  if the user cannot estimate accr with
 !   complete confidence, then it should be set to zero.
 !
-!OUTPUTS
+!  OUTPUTS
 !
 ! deriv is the calculated value of the derivative.
 ! error is an estimated upper bound on the magnitude of the absolute error in
@@ -90,10 +90,8 @@
 !   3   the interval [xmin, xmax] is too small (derivative and error will be
 !          undefined)
 !
-!AUTHORS
-!
-!	David Kahaner, NBS (Gaithersburg) : 11/02/89 :
-!		Original code: ftp://math.nist.gov/pub/repository/diff/src/DIFF
+!  AUTHORS
+!	Original code from: ftp://math.nist.gov/pub/repository/diff/src/DIFF
 !	Jacob Williams : 2/17/2013 : 
 !		Converted to modern Fortran.
 !		Some refactoring, addition of test cases.
