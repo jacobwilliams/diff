@@ -61,3 +61,11 @@ Example
 	!***********************************************************
 				
 	end program example
+
+Notes
+---------------
+
+Alan Miller's to_f90 program was used to assist in the conversion to modern Fortran: 
+<http://jblevins.org/mirror/amiller/to_f90.f90>
+
+
