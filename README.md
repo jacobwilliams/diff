@@ -17,6 +17,7 @@ The original sourcecode was produced by the National Bureau of Standards, and is
 Example
 ---------------
 
+```fortran
 	program example
 
 	use diff_module
@@ -65,6 +66,7 @@ Example
 	!***********************************************************
 				
 	end program example
+```
 
 Notes
 ---------------
