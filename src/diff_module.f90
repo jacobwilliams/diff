@@ -1,30 +1,30 @@
 !*****************************************************************************************
+!> author: Jacob Williams
+!  license: BSD
+!
+!  Numerical differentiation of user defined function using [[diff]].
+
     module diff_module
-!*****************************************************************************************
-    
-    implicit none    
-    
-    !parameters:
-    integer, parameter :: sp = selected_real_kind(6, 37)    !single
-    integer, parameter :: dp = selected_real_kind(15, 307)    !double
-    integer, parameter :: qp = selected_real_kind(33, 4931)    !quad
-    
-    !using double precision by default:
-    integer,parameter,public :: wp = dp
-    
+
+    use iso_fortran_env, only: wp => real64 !use double precision
+
+    implicit none
+
     private
-    
-    !class to define the function:
+
     type,public :: diff_func
+        !! class to define the function:
+        private
         procedure(func),pointer :: f => null()
         contains
-        procedure,private :: faccur
-        procedure :: compute_derivative => diff
+        private
+        procedure :: faccur
+        procedure,public :: set_function
+        procedure,public :: compute_derivative => diff
     end type diff_func
-    
-    !interface of function:
+
     abstract interface
-        function func(me,x) result(fx)
+        function func(me,x) result(fx)     !! interface to function
             import :: diff_func,wp
             implicit none
             class(diff_func),intent(inout) :: me
@@ -32,84 +32,83 @@
             real(wp) :: fx
         end function func
     end interface
-            
+
     contains
 !*****************************************************************************************
 
 !*****************************************************************************************
-    subroutine diff(me,iord,x0,xmin,xmax,eps,accr,deriv,error,ifail)
-!*****************************************************************************************
+!> author: Jacob Williams
+!  date:  12/27/2015
 !
-!  DESCRIPTION
-!
-!    numerical differentiation of user defined function
-!
-!   the procedure differentiate calculates the first, second or
-!   third order derivative of a function by using neville's process to
-!   extrapolate from a sequence of simple polynomial approximations based on
-!   interpolating points distributed symmetrically about x0 (or lying only on
-!   one side of x0 should this be necessary).  if the specified tolerance is
-!   non-zero then the procedure attempts to satisfy this absolute or relative
-!   accuracy requirement, while if it is unsuccessful or if the tolerance is
-!   set to zero then the result having the minimum achievable estimated error
-!   is returned instead.
-!
-!  INPUTS
-!
-! iord = 1, 2 or 3 specifies that the first, second or third order
-!   derivative,respectively, is required.
-! x0 is the point at which the derivative of the function is to be calculated.
-! xmin, xmax restrict the interpolating points to lie in [xmin, xmax], which
-!   should be the largest interval including x0 in which the function is
-!   calculable and continuous.
-! f, a real(wp) procedure supplied by the user, must yield the value of the
-!   function at x for any x in [xmin, xmax] when called by f(x).
-! eps denotes the tolerance, either absolute or relative.  eps=0 specifies that
-!   the error is to be minimised, while eps>0 or eps<0 specifies that the
-!   absolute or relative error, respectively, must not exceed abs(eps) if
-!   possible.  the accuracy requirement should not be made stricter than
-!   necessary, since the amount of computation tends to increase as
-!   the magnitude of eps decreases, and is particularly high when eps=0.
-! accr denotes that the absolute (accr>0) or relative (accr<0) errors in the
-!   computed values of the function are most unlikely to exceed abs(accr), which
-!   should be as small as possible.  if the user cannot estimate accr with
-!   complete confidence, then it should be set to zero.
-!
-!  OUTPUTS
-!
-! deriv is the calculated value of the derivative.
-! error is an estimated upper bound on the magnitude of the absolute error in
-!   the calculated result.  it should always be examined, since in extreme case
-!   may indicate that there are no correct significant digits in the value
-!   returned for derivative.
-! ifail will have one of the following values on exit:
-!   0   the procedure was successful.
-!   1   the estimated error in the result exceeds the (non-zero) requested
-!          error, but the most accurate result possible has been returned.
-!   2   input data incorrect (derivative and error will be undefined).
-!   3   the interval [xmin, xmax] is too small (derivative and error will be
-!          undefined)
-!
-!  AUTHORS
-!    Original code from: ftp://math.nist.gov/pub/repository/diff/src/DIFF
-!    Jacob Williams : 2/17/2013 : 
-!        Converted to modern Fortran.
-!        Some refactoring, addition of test cases.
-!
-!*****************************************************************************************
+!  Set the function in a [[diff_func]].
+!  Must be called before [[diff]].
+
+    subroutine set_function(me,f)
 
     implicit none
-    
-    class(diff_func),intent(inout) :: me    
-    integer,intent(in)    :: iord
-    real(wp), intent(in)  :: x0
-    real(wp), intent(in)  :: xmin
-    real(wp), intent(in)  :: xmax
-    real(wp), intent(in)  :: eps
-    real(wp), intent(in)  :: accr
-    real(wp), intent(out) :: deriv
-    real(wp), intent(out) :: error
-    integer, intent(out)  :: ifail
+
+    class(diff_func),intent(inout) :: me
+    procedure(func) :: f
+
+    me%f => f
+
+    end subroutine set_function
+!*****************************************************************************************
+
+!*****************************************************************************************
+!>
+!  the procedure diff calculates the first, second or
+!  third order derivative of a function by using neville's process to
+!  extrapolate from a sequence of simple polynomial approximations based on
+!  interpolating points distributed symmetrically about x0 (or lying only on
+!  one side of x0 should this be necessary).  if the specified tolerance is
+!  non-zero then the procedure attempts to satisfy this absolute or relative
+!  accuracy requirement, while if it is unsuccessful or if the tolerance is
+!  set to zero then the result having the minimum achievable estimated error
+!  is returned instead.
+!
+!## Authors
+!   * Original code from [NIST](ftp://math.nist.gov/pub/repository/diff/src/DIFF)
+!   * Jacob Williams : 2/17/2013 :
+!     Converted to modern Fortran.
+!     Some refactoring, addition of test cases.
+
+    subroutine diff(me,iord,x0,xmin,xmax,eps,accr,deriv,error,ifail)
+
+    implicit none
+
+    class(diff_func),intent(inout) :: me
+    integer,intent(in)    :: iord   !! 1, 2 or 3 specifies that the first, second or third order
+                                    !! derivative,respectively, is required.
+    real(wp), intent(in)  :: x0     !! the point at which the derivative of the function is to be calculated.
+    real(wp), intent(in)  :: xmin   !! xmin, xmax restrict the interpolating points to lie in [xmin, xmax], which
+                                    !! should be the largest interval including x0 in which the function is
+                                    !! calculable and continuous.
+    real(wp), intent(in)  :: xmax   !! xmin, xmax restrict the interpolating points to lie in [xmin, xmax], which
+                                    !! should be the largest interval including x0 in which the function is
+                                    !! calculable and continuous.
+    real(wp), intent(in)  :: eps    !! denotes the tolerance, either absolute or relative.  eps=0 specifies that
+                                    !! the error is to be minimised, while eps>0 or eps<0 specifies that the
+                                    !! absolute or relative error, respectively, must not exceed abs(eps) if
+                                    !! possible.  the accuracy requirement should not be made stricter than
+                                    !! necessary, since the amount of computation tends to increase as
+                                    !! the magnitude of eps decreases, and is particularly high when eps=0.
+    real(wp), intent(in)  :: accr   !! denotes that the absolute (accr>0) or relative (accr<0) errors in the
+                                    !! computed values of the function are most unlikely to exceed abs(accr), which
+                                    !! should be as small as possible.  if the user cannot estimate accr with
+                                    !! complete confidence, then it should be set to zero.
+    real(wp), intent(out) :: deriv  !! the calculated value of the derivative
+    real(wp), intent(out) :: error  !! an estimated upper bound on the magnitude of the absolute error in
+                                    !! the calculated result.  it should always be examined, since in extreme case
+                                    !! may indicate that there are no correct significant digits in the value
+                                    !! returned for derivative.
+    integer, intent(out)  :: ifail  !! will have one of the following values on exit:
+                                    !!  *0* the procedure was successful.
+                                    !!  *1* the estimated error in the result exceeds the (non-zero) requested
+                                    !!      error, but the most accurate result possible has been returned.
+                                    !!  *2* input data incorrect (derivative and error will be undefined).
+                                    !!  *3* the interval [xmin, xmax] is too small (derivative and error will be
+                                    !!      undefined).
 
     real(wp) :: acc,beta,beta4,h,h0,h1,h2, &
         newh1,newh2,heval,hprev,baseh,hacc1,hacc2,nhacc1, &
@@ -122,24 +121,22 @@
     logical :: ignore(10),contin,saved
     real(wp) :: dummy1,dummy2
 
-    ! eta is the minimum number of significant binary digits (apart from the
-    ! sign digit) used to represent the mantissa of real(wp) numbers. it should
-    ! be decreased by one if the computer truncates rather than rounds.
-    ! inf, sup are the largest possible positive integers subject to
-    ! 2**(-inf), -2**(-inf), 2**sup, and -2**sup all being representable real(wp)
-    ! numbers.
-    integer,parameter :: eta = digits(1.0_wp) - 1
-    integer,parameter :: inf = -minexponent(1.0_wp) - 2
-    integer,parameter :: sup = maxexponent(1.0_wp) - 1
-    
-    real(wp),parameter :: sqrt2 = sqrt(2.0_wp)
-    real(wp),parameter :: sqrt3 = sqrt(3.0_wp)
+    integer,parameter :: eta = digits(1.0_wp) - 1       !! minimum number of significant binary digits (apart from the
+                                                        !! sign digit) used to represent the mantissa of real(wp) numbers. it should
+                                                        !! be decreased by one if the computer truncates rather than rounds.
+    integer,parameter :: inf = -minexponent(1.0_wp) - 2 !! the largest possible positive integers subject to
+                                                        !! 2**(-inf) and -2**(-inf) being representable real(wp) numbers.
+    integer,parameter :: sup = maxexponent(1.0_wp) - 1  !! the largest possible positive integers subject to
+                                                        !! 2**sup and -2**sup being representable real(wp) numbers.
+
+    real(wp),parameter :: sqrt2 = sqrt(2.0_wp)  !! \( \sqrt(2) \)
+    real(wp),parameter :: sqrt3 = sqrt(3.0_wp)  !! \( \sqrt(3) \)
 
     if (iord<1 .or. iord>3 .or. xmax<=xmin .or. &
         x0>xmax .or. x0<xmin .or. .not. associated(me%f)) then
-    
+
       ifail = 2
-      
+
     else
 
         acc = accr
@@ -162,7 +159,7 @@
         s=128.0_wp*twoinf
         if (abs(x0) > 128.0_wp*twoinf*2.0_wp**eta) s = abs(x0)*2.0_wp**(-eta)
         if (maxh1 < s) then
-        ! interval too small
+          ! interval too small
           ifail =3
           return
         end if
@@ -278,12 +275,12 @@
         contin = .true.
 
         do
-    
+
             n = n+1
             if (.not. contin) exit
 
             if (init == 3) then
-            ! calculate coefficients for differentiation 
+            ! calculate coefficients for differentiation
             ! formulae and neville extrapolation algorithm
               if (iord == 1) then
                 beta=2.0_wp
@@ -357,7 +354,7 @@
 
             if (init >= 2) then
             ! initialization of steplengths, accuracy and other parameters
-  
+
               heval = signh*minh
               h = heval
               baseh = heval
@@ -662,7 +659,7 @@
                 if (iord /= 2) then
                   if (x0 /= 0.0_wp) then
                     dummy1 = 0.0_wp
-                    dummy2 = -h0       
+                    dummy2 = -h0
                     call me%faccur(dummy1,dummy2,acc0,x0,twoinf,f0,f1)
                   else
                     acc0 = 0.0_wp
@@ -677,9 +674,9 @@
             else
               contin = .false.
             end if
-        
+
         end do
-    
+
         if (eps < 0.0_wp) then
           s = abs(eps*deriv)
         else
@@ -689,17 +686,18 @@
         if (eps /= 0.0_wp .and. error > s) ifail = 1
 
     end if
-    
-!*****************************************************************************************
+
     end subroutine diff
 !*****************************************************************************************
 
 !*****************************************************************************************
+!>
+!  Support routine for [[diff]].
+
     subroutine faccur(me,h0,h1,facc,x0,twoinf,f0,f1)
-!*****************************************************************************************
 
     implicit none
-    
+
     class(diff_func),intent(inout) :: me
     real(wp), intent(inout)  :: h0
     real(wp), intent(inout)  :: h1
@@ -708,7 +706,7 @@
     real(wp), intent(in)     :: twoinf
     real(wp), intent(in)     :: f0
     real(wp), intent(in)     :: f1
-    
+
     real(wp) :: a0,a1,f00,f2,deltaf,t0,t1,df(5)
     integer :: j
 
@@ -765,7 +763,6 @@
     end do
     facc = 2.0_wp*facc
 
-!*****************************************************************************************
     end subroutine faccur
 !*****************************************************************************************
 
