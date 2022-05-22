@@ -97,7 +97,7 @@
 <a href="https://codecov.io/gh/jacobwilliams/diff"><img alt="codecov" src="https://codecov.io/gh/jacobwilliams/diff/branch/master/graph/badge.svg"></a>
 <a href="https://github.com/jacobwilliams/diff/commits/master"><img alt="last-commit" src="https://img.shields.io/github/last-commit/jacobwilliams/diff"></a></p>
 <h3>Overview</h3>
-<p>This code is a modern Fortran update of the DIFF subroutine found <a href="ftp://math.nist.gov/pub/repository/diff/">here</a>.</p>
+<p>This code is a modern Fortran update of the DIFF subroutine found here: <code>ftp://math.nist.gov/pub/repository/diff/</code></p>
 <p>The DIFF subroutine computes the first, second or third derivative of a real function of a single real variable.  The user provides the function, a real interval <code>[xmin,xmax]</code> on which the function is continuous, and a point <code>x0</code> lying in <code>[xmin,xmax]</code>. Optionally, the user may provide an estimate of the absolute or relative accuracy of function evaluation in <code>[xmin,xmax]</code> and the absolute or relative error tolerance that is acceptable in the computed derivative. The subroutine returns the computed derivative and an estimated upper bound on the absolute error of the computed derivative. The method used is Neville's process of extrapolating from a sequence of interpolating polynomials with interpolating points distributed symmetrically about <code>x0</code> or, if this is not possible, to one side of <code>x0</code>.</p>
 <p>The original sourcecode was produced by the National Bureau of Standards, and is presumed to be in the public domain.</p>
 <h3>Compiling</h3>
