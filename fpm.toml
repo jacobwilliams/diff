@@ -1,0 +1,18 @@
+name = "diff"
+author = "Jacob Williams"
+copyright  = "Copyright (c) 2014-2022, Jacob Williams"
+license = "BSD-3"
+description = "Numerical Differentiation of a User Defined Function"
+homepage = "https://github.com/jacobwilliams/diff"
+keywords = ["numerical differentiation"]
+
+[build]
+auto-executables = false
+auto-examples = false
+auto-tests = true
+
+[library]
+source-dir = "src"
+
+[install]
+library = true
