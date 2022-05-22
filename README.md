@@ -12,7 +12,7 @@ Numerical Differentiation of a User Defined Function
 
 ### Overview
 
-This code is a modern Fortran update of the DIFF subroutine found [here](ftp://math.nist.gov/pub/repository/diff/).
+This code is a modern Fortran update of the DIFF subroutine found here: `ftp://math.nist.gov/pub/repository/diff/`
 
 The DIFF subroutine computes the first, second or third derivative of a real function of a single real variable.  The user provides the function, a real interval `[xmin,xmax]` on which the function is continuous, and a point `x0` lying in `[xmin,xmax]`. Optionally, the user may provide an estimate of the absolute or relative accuracy of function evaluation in `[xmin,xmax]` and the absolute or relative error tolerance that is acceptable in the computed derivative. The subroutine returns the computed derivative and an estimated upper bound on the absolute error of the computed derivative. The method used is Neville's process of extrapolating from a sequence of interpolating polynomials with interpolating points distributed symmetrically about `x0` or, if this is not possible, to one side of `x0`.
 
