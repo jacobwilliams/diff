@@ -720,7 +720,7 @@
         f00 = me%f(x0+h0)
       end if
       if (abs(h1) >= 32.0_wp*twoinf) h1 = h1/8.0_wp
-      if (16.0_wp*abs(h1) > abs(h0)) h1 = sign(h1,1.0_wp)*abs(h0)/16.0_wp
+      if (16.0_wp*abs(h1) > abs(h0)) h1 = sign(1.0_wp,h1)*abs(h0)/16.0_wp
       if (me%f(x0+h0-h1) == f00) then
         if (256.0_wp*abs(h1) <= abs(h0)) then
           h1 = 2.0_wp*h1
@@ -730,7 +730,7 @@
           end do
           h1 = 8.0_wp*h1
         else
-          h1 = sign(h1,1.0_wp)*abs(h0)/16.0_wp
+          h1 = sign(1.0_wp,h1)*abs(h0)/16.0_wp
         end if
       else
         if (256.0_wp*twoinf <= abs(h0)) then
@@ -739,9 +739,9 @@
               h1 = h1/2.0_wp
           end do
           h1 = 8.0_wp*h1
-          if (16.0_wp*abs(h1) > abs(h0)) h1 = sign(h1,1.0_wp)*abs(h0)/16.0_wp
+          if (16.0_wp*abs(h1) > abs(h0)) h1 = sign(1.0_wp,h1)*abs(h0)/16.0_wp
         else
-          h1 = sign(h1,1.0_wp)*abs(h0)/16.0_wp
+          h1 = sign(1.0_wp,h1)*abs(h0)/16.0_wp
         end if
       end if
     else
