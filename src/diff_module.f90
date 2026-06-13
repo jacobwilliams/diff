@@ -68,7 +68,7 @@
 !  is returned instead.
 !
 !## Authors
-!   * Original code from [NIST](ftp://math.nist.gov/pub/repository/diff/src/DIFF)
+!   * Original code from [NIST](https://math.nist.gov/pub/repository/diff/src/)
 !   * Jacob Williams : 2/17/2013 :
 !     Converted to modern Fortran.
 !     Some refactoring, addition of test cases.
